@@ -1,445 +1,1048 @@
 <!DOCTYPE html>
-<html lang="es">
-
+<html lang="es" class="scroll-smooth">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
-    <title>IP Center - Propiedad Intelectual</title>
-    <!-- Tailwind + Font Awesome -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- SweetAlert2 opcional para notificaciones -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAPI · Gestión de Trámites Legales</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff',
+                            100: '#dbeafe',
+                            200: '#bfdbfe',
+                            300: '#93c5fd',
+                            400: '#60a5fa',
+                            500: '#3b82f6',
+                            600: '#2563eb',
+                            700: '#1d4ed8',
+                            800: '#1e40af',
+                            900: '#1e3a8a',
+                            950: '#172554',
+                        },
+                        slate: {
+                            750: '#2d3748',
+                            850: '#1a202c',
+                            950: '#0f172a',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto',
+                            'sans-serif'
+                        ],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <!-- Font Awesome CDN para iconos -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
     <style>
-        /* transiciones suaves */
-        .transition-smooth {
-            transition: all 0.2s ease;
+        :root {
+            --sidebar-width: 264px;
+            --sidebar-collapsed-width: 0px;
+            --header-height: 64px;
+            --transition-speed: 220ms;
         }
 
-        .sidebar-item.active {
-            background-color: #1e3a8a;
+        /* ========== SIDEBAR SCROLLBAR ========== */
+        .sidebar-scroll::-webkit-scrollbar {
+            width: 4px;
+        }
+        .sidebar-scroll::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .sidebar-scroll::-webkit-scrollbar-thumb {
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 8px;
+        }
+        .sidebar-scroll::-webkit-scrollbar-thumb:hover {
+            background: rgba(255, 255, 255, 0.22);
+        }
+
+        /* ========== SIDEBAR TRANSITIONS ========== */
+        .sidebar {
+            width: var(--sidebar-width);
+            transition: transform var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1),
+                width var(--transition-speed) cubic-bezier(0.4, 0, 0.2, 1);
+            will-change: transform;
+            z-index: 40;
+        }
+
+        /* ========== OVERLAY PARA MÓVIL ========== */
+        .sidebar-overlay {
+            transition: opacity var(--transition-speed) ease;
+            pointer-events: none;
+            opacity: 0;
+            z-index: 35;
+        }
+        .sidebar-overlay.active {
+            pointer-events: auto;
+            opacity: 1;
+        }
+
+        /* ========== DROPDOWN DE SOLICITUDES ========== */
+        .dropdown-menu {
+            overflow: hidden;
+            max-height: 0;
+            transition: max-height 350ms cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 250ms ease,
+                margin 300ms ease;
+            opacity: 0;
+            margin-top: 0;
+        }
+        .dropdown-menu.open {
+            max-height: 320px;
+            opacity: 1;
+            margin-top: 4px;
+        }
+
+        /* ========== RADIO CARDS ========== */
+        .radio-card input[type="radio"] {
+            position: absolute;
+            opacity: 0;
+            pointer-events: none;
+        }
+        .radio-card {
+            transition: all 180ms ease;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .radio-card:has(input:checked) {
+            border-color: #2563eb;
+            background-color: #eff6ff;
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.10);
+        }
+        .radio-card:hover {
+            border-color: #93c5fd;
+            background-color: #f8fafc;
+        }
+        .radio-card:has(input:checked):hover {
+            border-color: #2563eb;
+            background-color: #eff6ff;
+        }
+        .radio-card .check-indicator {
+            transition: all 200ms ease;
+            opacity: 0;
+            transform: scale(0.6);
+        }
+        .radio-card:has(input:checked) .check-indicator {
+            opacity: 1;
+            transform: scale(1);
+        }
+
+        /* ========== DOCUMENT CHECKLIST ITEM ========== */
+        .doc-item {
+            transition: all 200ms ease;
+        }
+        .doc-item:hover {
+            background-color: #f8fafc;
+        }
+        .doc-item .upload-btn {
+            transition: all 150ms ease;
+        }
+        .doc-item .upload-btn:hover {
+            background-color: #2563eb;
             color: white;
         }
 
-        .file-preview {
-            font-size: 0.75rem;
-            word-break: break-all;
+        /* ========== STEPPER ========== */
+        .stepper-dot {
+            transition: all 300ms ease;
+        }
+        .stepper-dot.active {
+            background-color: #2563eb;
+            box-shadow: 0 0 0 6px rgba(37, 99, 235, 0.18);
+        }
+        .stepper-dot.done {
+            background-color: #10b981;
+            box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.14);
+        }
+        .stepper-line {
+            transition: background-color 400ms ease;
+        }
+        .stepper-line.done {
+            background-color: #10b981;
+        }
+
+        /* ========== TOAST / NOTIFICACIÓN ========== */
+        .toast {
+            animation: slideInRight 350ms cubic-bezier(0.22, 0.61, 0.36, 1) forwards;
+        }
+        @keyframes slideInRight {
+            from {
+                transform: translateX(120%);
+                opacity: 0;
+            }
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+        .toast-out {
+            animation: slideOutRight 300ms cubic-bezier(0.55, 0, 1, 0.45) forwards;
+        }
+        @keyframes slideOutRight {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+            to {
+                transform: translateX(120%);
+                opacity: 0;
+            }
+        }
+
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 1023px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: 0;
+                height: 100vh;
+                height: 100dvh;
+                transform: translateX(-100%);
+                width: 280px;
+                box-shadow: 8px 0 30px rgba(0, 0, 0, 0.25);
+            }
+            .sidebar.open {
+                transform: translateX(0);
+            }
+            .main-content {
+                margin-left: 0 !important;
+                width: 100% !important;
+            }
+        }
+
+        @media (min-width: 1024px) {
+            .sidebar {
+                transform: translateX(0) !important;
+            }
+            .sidebar-overlay {
+                display: none !important;
+            }
+            .main-content {
+                margin-left: var(--sidebar-width);
+                width: calc(100% - var(--sidebar-width));
+            }
+        }
+
+        /* ========== PULSE PARA BADGE ========== */
+        @keyframes softPulse {
+            0%,
+            100% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.5;
+            }
+        }
+        .pulse-dot {
+            animation: softPulse 2s ease-in-out infinite;
+        }
+
+        /* ========== FOCO ACCESIBLE ========== */
+        *:focus-visible {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+            border-radius: 4px;
         }
     </style>
 </head>
+<body class="bg-slate-50 font-sans text-slate-700 antialiased min-h-screen">
 
-<body class="bg-gray-100 font-sans antialiased">
+    <!-- ==================== OVERLAY PARA MÓVIL ==================== -->
+    <div id="sidebarOverlay" class="sidebar-overlay fixed inset-0 bg-black/50 z-[35] lg:hidden"
+    onclick="closeSidebar()" aria-hidden="true"></div>
 
-    <div class="flex h-screen overflow-hidden">
-        <!-- SIDEBAR (Panel lateral) -->
-        <aside class="w-72 bg-white shadow-xl z-10 flex flex-col border-r border-gray-200">
-            <div class="p-6 border-b border-gray-200">
-                <h1 class="text-2xl font-bold text-blue-900 flex items-center gap-2"><i
-                        class="fas fa-gavel text-blue-700"></i> IP Center</h1>
-                <p class="text-xs text-gray-500 mt-1">Registro y Solicitud de Servicio</p>
+    <!-- ==================== SIDEBAR ==================== -->
+    <aside id="sidebar"
+    class="sidebar fixed top-0 left-0 h-full bg-slate-900 text-white flex flex-col shadow-2xl lg:shadow-xl sidebar-scroll overflow-y-auto overflow-x-hidden z-40">
+    <!-- Logo / Brand -->
+    <div class="flex items-center gap-3 px-5 py-5 border-b border-slate-700/60 flex-shrink-0">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-br from-brand-500 to-brand-700 flex items-center justify-center shadow-lg shadow-brand-500/25 flex-shrink-0">
+            <i class="fa-solid fa-scale-balanced text-white text-lg"></i>
+        </div>
+        <div class="min-w-0">
+            <h1 class="text-lg font-bold tracking-tight text-white leading-tight">SAPI</h1>
+            <p class="text-[11px] text-slate-400 leading-tight truncate">Servicio Autónomo</p>
+        </div>
+        <!-- Botón cerrar en móvil -->
+        <button onclick="closeSidebar()" class="lg:hidden ml-auto text-slate-400 hover:text-white transition-colors p-1"
+        aria-label="Cerrar menú">
+        <i class="fa-solid fa-xmark text-xl"></i>
+    </button>
+</div>
+
+<!-- Navegación -->
+<nav class="flex-1 px-3 py-4 space-y-1 overflow-y-auto sidebar-scroll" aria-label="Navegación principal">
+    <!-- Dashboard -->
+    <a href="#"
+    class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200 group">
+    <i class="fa-solid fa-house w-5 text-center text-slate-400 group-hover:text-brand-400 transition-colors"></i>
+    <span class="font-medium text-sm">Dashboard</span>
+</a>
+
+<!-- Pagos -->
+<a href="#"
+class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200 group">
+<i class="fa-solid fa-file-invoice w-5 text-center text-slate-400 group-hover:text-brand-400 transition-colors"></i>
+<span class="font-medium text-sm">Pagos</span>
+</a>
+
+<!-- Solicitudes (Dropdown) -->
+<div>
+    <button id="dropdownToggle"
+    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200 group"
+    aria-expanded="true" aria-controls="dropdownSolicitudes">
+    <i class="fa-solid fa-folder-open w-5 text-center text-slate-400 group-hover:text-brand-400 transition-colors"></i>
+    <span class="font-medium text-sm flex-1 text-left">Solicitudes</span>
+    <i id="dropdownChevron"
+    class="fa-solid fa-chevron-down text-[10px] text-slate-500 transition-transform duration-300 rotate-180"></i>
+</button>
+<!-- Menú desplegable -->
+<div id="dropdownSolicitudes" class="dropdown-menu open ml-8 border-l border-slate-700/50 pl-3 space-y-0.5">
+    <a href="{{url_for('Renders.render_patente')}}"
+    class="block px-3 py-2 rounded-md text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-150 bg-brand-600/20 text-brand-300 font-medium">
+    <i class="fa-solid fa-lightbulb mr-2 text-[11px] text-brand-400"></i> Patente
+</a>
+<a href="{{url_for('Renders.render_marcas')}}"
+class="block px-3 py-2 rounded-md text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-150">
+<i class="fa-solid fa-tag mr-2 text-[11px] text-slate-500"></i> Marcas
+</a>
+<a href="{{url_for('Renders.render_derechoautor')}}"
+class="block px-3 py-2 rounded-md text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-150">
+<i class="fa-solid fa-copyright mr-2 text-[11px] text-slate-500"></i> Derecho de Autor
+</a>
+<a href="#registro-obras"
+class="block px-3 py-2 rounded-md text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-150">
+<i class="fa-solid fa-paintbrush mr-2 text-[11px] text-slate-500"></i> Registro de Obras
+</a>
+</div>
+</div>
+
+<!-- Perfil -->
+<a href="#"
+class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-200 group mt-2">
+<i class="fa-solid fa-user w-5 text-center text-slate-400 group-hover:text-brand-400 transition-colors"></i>
+<span class="font-medium text-sm">Perfil</span>
+</a>
+</nav>
+
+<!-- Footer del Sidebar: Usuario + Salir -->
+<div class="flex-shrink-0 border-t border-slate-700/60 px-3 py-3 space-y-2">
+    <!-- Info de usuario -->
+    <div class="flex items-center gap-3 px-3 py-2 rounded-lg bg-slate-800/60">
+        <div class="w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+            AG
+        </div>
+        <div class="min-w-0 flex-1">
+            <p class="text-sm font-medium text-white truncate">Andrea González</p>
+            <p class="text-[11px] text-slate-400 truncate">abogada@sapi.gob.ve</p>
+        </div>
+    </div>
+    <!-- Botón Salir -->
+    <button
+    class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-400 hover:text-white hover:bg-red-600/80 transition-all duration-200 group">
+    <i class="fa-solid fa-right-from-bracket w-5 text-center group-hover:text-white transition-colors"></i>
+    <span class="font-medium text-sm">Salir</span>
+</button>
+</div>
+</aside>
+{% include "partials/sidebar.html" %}
+<!-- ==================== CONTENIDO PRINCIPAL ==================== -->
+<main id="mainContent" class="main-content transition-all duration-300 min-h-screen flex flex-col"
+style="margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width));">
+
+<!-- Header -->
+<header class="sticky top-0 z-30 bg-white/80 backdrop-blur-lg border-b border-slate-200/80 flex items-center justify-between px-5 lg:px-8 h-16 flex-shrink-0">
+    <!-- Botón hamburguesa (móvil) -->
+    <button onclick="openSidebar()"
+    class="lg:hidden text-slate-600 hover:text-brand-600 transition-colors p-2 -ml-2 rounded-lg hover:bg-slate-100"
+    aria-label="Abrir menú">
+    <i class="fa-solid fa-bars text-xl"></i>
+</button>
+
+<!-- Breadcrumb / Título -->
+<div class="flex items-center gap-2 text-sm text-slate-500">
+    <i class="fa-solid fa-lightbulb text-brand-500"></i>
+    <span class="hidden sm:inline text-slate-400">Solicitudes</span>
+    <i class="fa-solid fa-chevron-right text-[9px] text-slate-300 hidden sm:inline"></i>
+    <span class="font-semibold text-slate-700">Patente de Invención</span>
+</div>
+
+<!-- Acciones header -->
+<div class="flex items-center gap-3">
+    <!-- Notificaciones -->
+    <button class="relative p-2 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-all"
+    aria-label="Notificaciones" title="Notificaciones">
+    <i class="fa-solid fa-bell text-lg"></i>
+    <span class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full pulse-dot border-2 border-white"></span>
+</button>
+<!-- Avatar en header (mobile) -->
+<div class="lg:hidden w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-xs font-bold">
+    AG
+</div>
+</div>
+</header>
+
+<!-- Área de contenido -->
+<div class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+    <div class="max-w-4xl mx-auto space-y-6">
+
+        <!-- ========== STEPPER / ASISTENTE DE REGISTRO ========== -->
+        <div class="bg-white rounded-2xl shadow-sm border border-slate-200/70 p-5 sm:p-7">
+            <!-- Stepper visual -->
+            <div class="flex items-center justify-between mb-8 max-w-md mx-auto">
+                <!-- Paso 1 -->
+                <div class="flex flex-col items-center gap-1.5 relative">
+                    <div class="stepper-dot active w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm z-10 bg-brand-600 shadow-lg shadow-brand-500/25">
+                        1
+                    </div>
+                    <span class="text-[11px] font-semibold text-brand-600 whitespace-nowrap">Tipo de Solicitante</span>
+                </div>
+                <!-- Línea -->
+                <div class="flex-1 h-[2px] bg-slate-200 stepper-line -mx-2 relative -top-4"></div>
+                <!-- Paso 2 -->
+                <div class="flex flex-col items-center gap-1.5 relative">
+                    <div class="stepper-dot w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm z-10 bg-slate-300">
+                        2
+                    </div>
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">Información</span>
+                </div>
+                <!-- Línea -->
+                <div class="flex-1 h-[2px] bg-slate-200 stepper-line -mx-2 relative -top-4"></div>
+                <!-- Paso 3 -->
+                <div class="flex flex-col items-center gap-1.5 relative">
+                    <div class="stepper-dot w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm z-10 bg-slate-300">
+                        3
+                    </div>
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">Documentos</span>
+                </div>
+                <!-- Línea -->
+                <div class="flex-1 h-[2px] bg-slate-200 stepper-line -mx-2 relative -top-4"></div>
+                <!-- Paso 4 -->
+                <div class="flex flex-col items-center gap-1.5 relative">
+                    <div class="stepper-dot w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm z-10 bg-slate-300">
+                        4
+                    </div>
+                    <span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">Enviar</span>
+                </div>
             </div>
-            <nav class="flex-1 py-6 px-4 space-y-2">
-                <a href="#" data-view="dashboard"
-                    class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 transition-smooth"><i
-                        class="fas fa-tachometer-alt w-5"></i> Dashboard</a>
-                <a href="#" data-view="new-request"
-                    class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 transition-smooth"><i
-                        class="fas fa-plus-circle w-5"></i> Nueva Solicitud</a>
-                <a href="#" data-view="payments"
-                    class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 transition-smooth"><i
-                        class="fas fa-credit-card w-5"></i> Pagos Realizados</a>
-                <a href="#" data-view="profile"
-                    class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 transition-smooth"><i
-                        class="fas fa-user-circle w-5"></i> Mi Perfil</a>
-            </nav>
-            <div class="p-4 border-t border-gray-200 text-xs text-gray-400 text-center">
-                <i class="fas fa-shield-alt"></i> SAPI / Derechos de Autor
-            </div>
-        </aside>
 
-        <!-- MAIN CONTENT -->
-        <main class="flex-1 overflow-y-auto p-6 bg-gray-50" id="mainContent">
-            <!-- Aquí se inyectarán las vistas dinámicas -->
-            <div id="viewContainer" class="animate-fade-in"></div>
-        </main>
+            <!-- ========== SELECTOR TIPO DE SOLICITANTE ========== -->
+            <section aria-labelledby="tipoSolicitanteHeading">
+                <div class="flex items-center gap-2 mb-4">
+                    <h2 id="tipoSolicitanteHeading" class="text-base font-semibold text-slate-800">
+                        Tipo de Solicitante
+                    </h2>
+                    <span class="text-red-500 font-bold text-sm">*</span>
+                    <span class="text-[11px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Obligatorio</span>
+                </div>
+
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" role="radiogroup"
+                aria-label="Seleccionar tipo de solicitante">
+                <!-- Entes y Empresas del Estado -->
+                <label class="radio-card flex items-start gap-3 p-4 rounded-xl bg-white border-2 border-slate-200 cursor-pointer relative">
+                    <input type="radio" name="tipoSolicitante" value="entes" checked>
+                    <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center mt-0.5">
+                        <i class="fa-solid fa-building-columns text-amber-600 text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-slate-800">Entes del Estado</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Empresas y organismos públicos</p>
+                    </div>
+                    <div class="check-indicator absolute top-2 right-2 w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center">
+                        <i class="fa-solid fa-check text-white text-[9px]"></i>
+                    </div>
+                </label>
+
+                <!-- Personas Naturales -->
+                <label class="radio-card flex items-start gap-3 p-4 rounded-xl bg-white border-2 border-slate-200 cursor-pointer relative">
+                    <input type="radio" name="tipoSolicitante" value="natural">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center mt-0.5">
+                        <i class="fa-solid fa-user text-emerald-600 text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-slate-800">Persona Natural</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Ciudadano individual</p>
+                    </div>
+                    <div class="check-indicator absolute top-2 right-2 w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center">
+                        <i class="fa-solid fa-check text-white text-[9px]"></i>
+                    </div>
+                </label>
+
+                <!-- Personas Jurídicas -->
+                <label class="radio-card flex items-start gap-3 p-4 rounded-xl bg-white border-2 border-slate-200 cursor-pointer relative">
+                    <input type="radio" name="tipoSolicitante" value="juridica">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center mt-0.5">
+                        <i class="fa-solid fa-building text-purple-600 text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-slate-800">Persona Jurídica</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Empresas y sociedades</p>
+                    </div>
+                    <div class="check-indicator absolute top-2 right-2 w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center">
+                        <i class="fa-solid fa-check text-white text-[9px]"></i>
+                    </div>
+                </label>
+
+                <!-- Apoderados o Agentes -->
+                <label class="radio-card flex items-start gap-3 p-4 rounded-xl bg-white border-2 border-slate-200 cursor-pointer relative">
+                    <input type="radio" name="tipoSolicitante" value="apoderado">
+                    <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center mt-0.5">
+                        <i class="fa-solid fa-file-contract text-rose-600 text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm font-semibold text-slate-800">Apoderado/Agente</p>
+                        <p class="text-[11px] text-slate-400 mt-0.5">Representante legal</p>
+                    </div>
+                    <div class="check-indicator absolute top-2 right-2 w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center">
+                        <i class="fa-solid fa-check text-white text-[9px]"></i>
+                    </div>
+                </label>
+            </div>
+        </section>
     </div>
 
-    <script>
-        // ---------------------- DATA MODELS (LocalStorage) -------------------------
-        let requests = [];       // solicitudes
-        let payments = [];       // pagos realizados
-        let userProfile = {      // documentos personales para verificación
-            tipoSolicitante: "natural", // natural, juridico, ente
-            documentos: [],
-            nombreCompleto: "",
-            rif: "",
-            cedula: "",
-            // extras
+    <!-- ========== FORMULARIO: INFORMACIÓN DE LA PATENTE ========== -->
+    <div class="bg-white rounded-2xl shadow-sm border border-slate-200/70 p-5 sm:p-7 space-y-5"
+    id="seccionInformacion">
+    <div class="flex items-center gap-2 mb-2">
+        <h2 class="text-base font-semibold text-slate-800">Información de la Invención</h2>
+        <span class="text-red-500 font-bold text-sm">*</span>
+    </div>
+
+    <!-- Título de la invención -->
+    <div>
+        <label for="tituloInvencion" class="block text-sm font-medium text-slate-700 mb-1.5">
+            Título de la Invención <span class="text-red-500">*</span>
+        </label>
+        <input type="text" id="tituloInvencion" name="tituloInvencion" required
+        class="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-800 placeholder-slate-400
+        focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-all text-sm"
+        placeholder="Ej: Sistema automatizado de riego por goteo con sensor IoT">
+        <p class="text-[11px] text-slate-400 mt-1">Máximo 200 caracteres. Sea descriptivo y conciso.</p>
+    </div>
+
+    <!-- Reseña y alcance -->
+    <div>
+        <label for="resena" class="block text-sm font-medium text-slate-700 mb-1.5">
+            Reseña y Alcance de la Invención <span class="text-red-500">*</span>
+        </label>
+        <textarea id="resena" name="resena" rows="5" required
+        class="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-800 placeholder-slate-400
+        focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-all text-sm resize-y"
+    placeholder="Describa detalladamente el propósito, funcionamiento, novedad y campo de aplicación de la invención..."></textarea>
+    <p class="text-[11px] text-slate-400 mt-1">Incluya antecedentes, problema técnico que resuelve y ventajas frente a soluciones existentes.</p>
+</div>
+
+<!-- Fecha de divulgación (si aplica) -->
+<div>
+    <label for="fechaDivulgacion" class="block text-sm font-medium text-slate-700 mb-1.5">
+        Fecha de primera divulgación (si aplica)
+    </label>
+    <input type="date" id="fechaDivulgacion" name="fechaDivulgacion"
+    class="w-full sm:w-64 px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-800
+    focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-all text-sm">
+    <p class="text-[11px] text-slate-400 mt-1">Deje en blanco si la invención no ha sido divulgada públicamente.</p>
+</div>
+</div>
+
+<!-- ========== CHECKLIST DE DOCUMENTOS ========== -->
+<div class="bg-white rounded-2xl shadow-sm border border-slate-200/70 p-5 sm:p-7 space-y-5"
+id="seccionDocumentos">
+<div class="flex items-center justify-between flex-wrap gap-2">
+    <div class="flex items-center gap-2">
+        <h2 class="text-base font-semibold text-slate-800">Documentos a Consignar</h2>
+        <span class="text-red-500 font-bold text-sm">*</span>
+    </div>
+    <span id="docCounter" class="text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">
+        0 / 5 cargados
+    </span>
+</div>
+<p class="text-sm text-slate-500 -mt-2">
+    Adjunte cada documento en formato PDF o JPG (máx. 10 MB por archivo). Los documentos marcados con <span class="text-red-500 font-bold">*</span> son obligatorios.
+</p>
+
+<!-- Lista dinámica de documentos -->
+<div id="documentChecklist" class="space-y-2 mt-3">
+    <!-- Se llena dinámicamente con JS -->
+</div>
+</div>
+
+<!-- ========== BOTONES DE ACCIÓN ========== -->
+<div class="flex flex-col sm:flex-row gap-3 justify-end">
+    <button type="button"
+    class="order-2 sm:order-1 px-5 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-medium text-sm
+    hover:bg-slate-50 hover:border-slate-400 transition-all">
+    <i class="fa-solid fa-floppy-disk mr-1.5"></i> Guardar borrador
+</button>
+<button type="button" id="btnEnviar"
+class="order-1 sm:order-2 px-6 py-2.5 rounded-lg bg-brand-600 text-white font-semibold text-sm
+hover:bg-brand-700 active:bg-brand-800 transition-all shadow-md shadow-brand-500/20 hover:shadow-lg hover:shadow-brand-500/30">
+<i class="fa-solid fa-paper-plane mr-1.5"></i> Enviar Solicitud
+</button>
+</div>
+
+</div>
+</div>
+</main>
+
+<!-- ==================== TOAST DE NOTIFICACIÓN ==================== -->
+<div id="toast" class="fixed top-5 right-5 z-50 hidden toast pointer-events-none"
+role="alert" aria-live="polite">
+<div class="bg-white rounded-xl shadow-xl border border-slate-200 px-5 py-4 flex items-center gap-3 max-w-sm pointer-events-auto">
+    <div class="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0">
+        <i class="fa-solid fa-check text-emerald-600 text-sm"></i>
+    </div>
+    <div>
+        <p class="text-sm font-semibold text-slate-800">Cambios aplicados</p>
+        <p class="text-xs text-slate-500" id="toastMsg">La lista de documentos se ha actualizado.</p>
+    </div>
+    <button onclick="hideToast()" class="ml-auto text-slate-400 hover:text-slate-600 transition-colors flex-shrink-0">
+        <i class="fa-solid fa-xmark text-sm"></i>
+    </button>
+</div>
+</div>
+
+<!-- ==================== SCRIPTS ==================== -->
+<script>
+    (function() {
+        // ========== REFERENCIAS DOM ==========
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('sidebarOverlay');
+        const dropdownToggle = document.getElementById('dropdownToggle');
+        const dropdownMenu = document.getElementById('dropdownSolicitudes');
+        const dropdownChevron = document.getElementById('dropdownChevron');
+        const documentChecklist = document.getElementById('documentChecklist');
+        const docCounter = document.getElementById('docCounter');
+        const radioGroup = document.querySelectorAll('input[name="tipoSolicitante"]');
+        const btnEnviar = document.getElementById('btnEnviar');
+        const toast = document.getElementById('toast');
+        const toastMsg = document.getElementById('toastMsg');
+        const tituloInvencion = document.getElementById('tituloInvencion');
+        const resena = document.getElementById('resena');
+        const mainContent = document.getElementById('mainContent');
+
+        let toastTimer = null;
+        let documentosCargados = {}; // { docId: true/false }
+
+        // ========== DEFINICIÓN DE DOCUMENTOS POR TIPO DE SOLICITANTE ==========
+        const documentosPorTipo = {
+            'entes': [
+                { id: 'gaceta', nombre: 'Copia de Gaceta Oficial', obligatorio: true,
+                    desc: 'Gaceta donde se crea el ente u organismo público.',
+                icono: 'fa-newspaper', colorIcono: 'text-amber-600', bgIcono: 'bg-amber-50' },
+                { id: 'rif_ente', nombre: 'RIF del Ente', obligatorio: true,
+                    desc: 'Registro de Información Fiscal vigente del ente.',
+                icono: 'fa-file-lines', colorIcono: 'text-blue-600', bgIcono: 'bg-blue-50' },
+                { id: 'cedula_rep', nombre: 'Cédula de Identidad del Representante', obligatorio: true,
+                    desc: 'Copia legible de la cédula del representante legal.', icono: 'fa-id-card',
+                    colorIcono: 'text-emerald-600', bgIcono: 'bg-emerald-50' },
+                { id: 'declaracion_inv', nombre: 'Declaración de Inventores', obligatorio: true,
+                    desc: 'Documento firmado por todos los inventores reconociendo su participación.',
+                    icono: 'fa-users', colorIcono: 'text-purple-600', bgIcono: 'bg-purple-50' },
+                { id: 'memoria', nombre: 'Memoria Descriptiva', obligatorio: true,
+                    desc: 'Documento técnico detallado de la invención con diagramas.', icono: 'fa-diagram-project',
+                    colorIcono: 'text-cyan-600', bgIcono: 'bg-cyan-50' },
+                { id: 'pago_tasa', nombre: 'Comprobante de Pago de Tasa Administrativa', obligatorio: true,
+                    desc: 'Recibo bancario o comprobante electrónico del pago arancelario.',
+                icono: 'fa-receipt', colorIcono: 'text-rose-600', bgIcono: 'bg-rose-50' },
+            ],
+            'natural': [
+                { id: 'cedula_nat', nombre: 'Cédula de Identidad', obligatorio: true,
+                    desc: 'Copia legible de la cédula de identidad del solicitante.', icono: 'fa-id-card',
+                    colorIcono: 'text-emerald-600', bgIcono: 'bg-emerald-50' },
+                { id: 'declaracion_inv', nombre: 'Declaración de Inventores', obligatorio: true,
+                    desc: 'Documento firmado por todos los inventores (si hay co-inventores).',
+                icono: 'fa-users', colorIcono: 'text-purple-600', bgIcono: 'bg-purple-50' },
+                { id: 'memoria', nombre: 'Memoria Descriptiva', obligatorio: true,
+                    desc: 'Documento técnico detallado de la invención.', icono: 'fa-diagram-project',
+                    colorIcono: 'text-cyan-600', bgIcono: 'bg-cyan-50' },
+                { id: 'pago_tasa', nombre: 'Comprobante de Pago de Tasa Administrativa', obligatorio: true,
+                    desc: 'Recibo bancario del pago arancelario correspondiente.', icono: 'fa-receipt',
+                    colorIcono: 'text-rose-600', bgIcono: 'bg-rose-50' },
+                { id: 'poder_notarial', nombre: 'Poder Notariado', obligatorio: false,
+                    desc: 'Solo si actúa a través de un representante o gestor.', icono: 'fa-file-contract',
+                    colorIcono: 'text-orange-600', bgIcono: 'bg-orange-50' },
+            ],
+            'juridica': [
+                { id: 'rif_empresa', nombre: 'RIF de la Empresa', obligatorio: true,
+                    desc: 'Registro de Información Fiscal vigente.', icono: 'fa-file-lines',
+                    colorIcono: 'text-blue-600', bgIcono: 'bg-blue-50' },
+                { id: 'doc_constitutivo', nombre: 'Documento Constitutivo', obligatorio: true,
+                    desc: 'Acta constitutiva o estatutos sociales registrados.', icono: 'fa-building',
+                    colorIcono: 'text-indigo-600', bgIcono: 'bg-indigo-50' },
+                { id: 'cedula_rep_legal', nombre: 'Cédula del Representante Legal', obligatorio: true,
+                    desc: 'Copia de la cédula de identidad del representante.', icono: 'fa-id-card',
+                    colorIcono: 'text-emerald-600', bgIcono: 'bg-emerald-50' },
+                { id: 'declaracion_inv', nombre: 'Declaración de Inventores', obligatorio: true,
+                    desc: 'Documento firmado por los inventores.', icono: 'fa-users', colorIcono: 'text-purple-600',
+                    bgIcono: 'bg-purple-50' },
+                { id: 'memoria', nombre: 'Memoria Descriptiva', obligatorio: true,
+                    desc: 'Documento técnico detallado de la invención.', icono: 'fa-diagram-project',
+                    colorIcono: 'text-cyan-600', bgIcono: 'bg-cyan-50' },
+                { id: 'pago_tasa', nombre: 'Comprobante de Pago de Tasa Administrativa', obligatorio: true,
+                    desc: 'Recibo bancario del pago arancelario.', icono: 'fa-receipt', colorIcono: 'text-rose-600',
+                    bgIcono: 'bg-rose-50' },
+            ],
+            'apoderado': [
+                { id: 'poder_notarial_ap', nombre: 'Poder Notariado', obligatorio: true,
+                    desc: 'Documento legal que acredita la representación.', icono: 'fa-file-contract',
+                    colorIcono: 'text-orange-600', bgIcono: 'bg-orange-50' },
+                { id: 'cedula_apoderado', nombre: 'Cédula del Apoderado', obligatorio: true,
+                    desc: 'Copia de la cédula de identidad del apoderado.', icono: 'fa-id-card',
+                    colorIcono: 'text-emerald-600', bgIcono: 'bg-emerald-50' },
+                { id: 'cedula_poderdante', nombre: 'Cédula del Poderdante', obligatorio: true,
+                    desc: 'Copia de la cédula de quien otorga el poder.', icono: 'fa-id-card',
+                    colorIcono: 'text-teal-600', bgIcono: 'bg-teal-50' },
+                { id: 'declaracion_inv', nombre: 'Declaración de Inventores', obligatorio: true,
+                    desc: 'Documento firmado por todos los inventores.', icono: 'fa-users',
+                colorIcono: 'text-purple-600', bgIcono: 'bg-purple-50' },
+                { id: 'memoria', nombre: 'Memoria Descriptiva', obligatorio: true,
+                    desc: 'Documento técnico detallado de la invención.', icono: 'fa-diagram-project',
+                    colorIcono: 'text-cyan-600', bgIcono: 'bg-cyan-50' },
+                { id: 'pago_tasa', nombre: 'Comprobante de Pago de Tasa Administrativa', obligatorio: true,
+                    desc: 'Recibo bancario del pago arancelario.', icono: 'fa-receipt', colorIcono: 'text-rose-600',
+                    bgIcono: 'bg-rose-50' },
+            ],
         };
 
-        // Helper load/save
-        function loadData() {
-            const storedRequests = localStorage.getItem("ip_requests");
-            if (storedRequests) requests = JSON.parse(storedRequests);
-            const storedPayments = localStorage.getItem("ip_payments");
-            if (storedPayments) payments = JSON.parse(storedPayments);
-            const storedProfile = localStorage.getItem("ip_profile");
-            if (storedProfile) userProfile = JSON.parse(storedProfile);
-            else {
-                // perfil inicial por defecto
-                userProfile = { tipoSolicitante: "natural", documentos: [], nombreCompleto: "Usuario Demo", rif: "J-12345678-0", cedula: "V12345678" };
-                saveProfile();
-            }
+        // ========== FUNCIONES DEL SIDEBAR ==========
+        function openSidebar() {
+            sidebar.classList.add('open');
+            overlay.classList.add('active');
+            document.body.style.overflow = 'hidden';
         }
-        function saveRequests() { localStorage.setItem("ip_requests", JSON.stringify(requests)); }
-        function savePayments() { localStorage.setItem("ip_payments", JSON.stringify(payments)); }
-        function saveProfile() { localStorage.setItem("ip_profile", JSON.stringify(userProfile)); }
 
-        // utils
-        function generateId() { return Date.now() + '-' + Math.random().toString(36).substr(2, 6); }
+        function closeSidebar() {
+            sidebar.classList.remove('open');
+            overlay.classList.remove('active');
+            document.body.style.overflow = '';
+        }
 
-        // =========================== REQUISITOS DINAMICOS (según documento) ==========================
-        // Obtiene lista de documentos/requisitos según: tipoSolicitud (patente, marca, copyright), subtipoObra (solo copyright), tipoSolicitante, conApoderado
-        function getRequisitosDocumentales(tipo, subtipoObra, tipoSol, conApoderado) {
-            let docs = [];
-            // Requisitos comunes según tipo de solicitante (ENTES / PERSONA NATURAL / PERSONA JURÍDICA)
-            if (tipoSol === "ente") {
-                docs.push({ label: "Gaceta Oficial (Decreto o Ley de creación)", required: true, key: "gaceta_creacion" });
-                docs.push({ label: "Gaceta Oficial Acta Constitutiva (si aplica)", required: false, key: "gaceta_acta" });
-                docs.push({ label: "Gaceta Oficial Nombramiento Representante Legal", required: true, key: "gaceta_nombramiento" });
-                docs.push({ label: "Última Acta de Asamblea (si >5 años)", required: false, key: "acta_asamblea" });
-                docs.push({ label: "Cédula/Pasaporte del Representante Legal", required: true, key: "ci_representante" });
-                docs.push({ label: "RIF del Representante Legal", required: true, key: "rif_representante" });
-                docs.push({ label: "RIF del Ente", required: true, key: "rif_ente" });
-            } else if (tipoSol === "juridico") {
-                docs.push({ label: "Acta Constitutiva de la Sociedad", required: true, key: "acta_constitutiva" });
-                docs.push({ label: "Última Acta de Asamblea (si >5 años)", required: false, key: "acta_asamblea_jur" });
-                docs.push({ label: "RIF de la Sociedad (vigente)", required: true, key: "rif_sociedad" });
-                docs.push({ label: "Cédula/Pasaporte del Director/Presidente", required: true, key: "ci_director" });
-                docs.push({ label: "RIF del Representante Legal", required: true, key: "rif_replegal" });
-                docs.push({ label: "Documento de Cesión de derechos patrimoniales (autor a favor)", required: true, key: "cesion_derechos" });
-            } else { // natural
-                docs.push({ label: "Cédula de Identidad o Pasaporte", required: true, key: "ci_natural" });
-                docs.push({ label: "RIF del Solicitante", required: true, key: "rif_natural" });
-                if (conApoderado) {
-                    docs.push({ label: "Poder autenticado y registrado en SAPI", required: true, key: "poder_apoderado" });
-                    docs.push({ label: "Cédula del Apoderado", required: true, key: "ci_apoderado" });
-                    docs.push({ label: "RIF del Apoderado", required: true, key: "rif_apoderado" });
+        // Cerrar sidebar con tecla Escape
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape' && sidebar.classList.contains('open') && window.innerWidth < 1024) {
+                closeSidebar();
+            }
+        });
+
+        // Cerrar sidebar al hacer clic en un enlace en móvil
+        sidebar.querySelectorAll('a').forEach(link => {
+            link.addEventListener('click', function() {
+                if (window.innerWidth < 1024) {
+                    // Pequeño delay para que se vea el feedback visual
+                    setTimeout(closeSidebar, 150);
                 }
-                // extranjero consideración: se maneja nota, pero incluimos opcional poder
-            }
-            // Adicionales para Apoderado / Agente Industrial si aplica (independiente)
-            if (conApoderado && (tipoSol === "juridico" || tipoSol === "natural" || tipoSol === "ente")) {
-                docs.push({ label: "Poder amplio y suficiente (autenticado/apostillado)", required: true, key: "poder_agente" });
-            }
+            });
+        });
 
-            // Requisitos específicos según producto (Patente, Marca, Copyright)
-            if (tipo === "patente") {
-                docs.push({ label: "Reseña y alcance de la invención (documento descriptivo)", required: true, key: "descripcion_invencion" });
-                docs.push({ label: "Declaración y cesión de inventores (firmada cedente/cesionario)", required: true, key: "declaracion_cesion_inventores" });
-                docs.push({ label: "Recomendación: pago de búsqueda avanzada SAPI (comprobante)", required: false, key: "busqueda_avanzada" });
-            } else if (tipo === "marca") {
-                docs.push({ label: "Listado de 3 nombres propuestos (archivo .txt o PDF)", required: true, key: "lista_nombres" });
-                docs.push({ label: "Imagen (isotipo/imagotipo) formato JPG", required: false, key: "imagen_marca" });
-                docs.push({ label: "Rubros/mercados impactados (descripción)", required: true, key: "rubros_marca" });
-                docs.push({ label: "Búsqueda de antecedentes fonéticos y gráficos (pago)", required: false, key: "busqueda_marca" });
-            } else if (tipo === "copyright") {
-                // Requisitos generales adicionales para obras
-                docs.push({ label: "Documento de cesión de derechos patrimoniales (si persona jurídica/ente)", required: (tipoSol !== "natural"), key: "cesion_copyright" });
-                // Requisitos según tipo de obra
-                if (subtipoObra === "literaria") {
-                    docs.push({ label: "2 ejemplares de la obra en CD (formato PDF)", required: true, key: "ejemplares_literarios" });
-                } else if (subtipoObra === "musical") {
-                    docs.push({ label: "2 CDs con archivos MP3 + partituras (PDF)", required: true, key: "ejemplares_musicales" });
-                } else if (subtipoObra === "fonografica") {
-                    docs.push({ label: "2 ejemplares identificando productores, intérpretes, autores", required: true, key: "produccion_fonografica" });
-                } else if (subtipoObra === "audiovisual") {
-                    docs.push({ label: "Cédula de autor (Director Realización/Guion/Música)", required: true, key: "autores_audiovisual" });
-                    docs.push({ label: "2 ejemplares en formato video (CD/USB)", required: true, key: "video_ejemplares" });
-                } else if (subtipoObra === "radiofonica") {
-                    docs.push({ label: "2 ejemplares en formato MP3 (programa radio)", required: true, key: "radio_mp3" });
-                } else if (subtipoObra === "artevisual") {
-                    docs.push({ label: "2 CDs con fotografías + descripción técnica (material, dimensiones)", required: true, key: "arte_descripcion" });
-                } else if (subtipoObra === "software") {
-                    docs.push({ label: "2 CDs con código fuente/primeras/últimas páginas", required: true, key: "software_codigo" });
-                    docs.push({ label: "Manual de usuario y procedimiento", required: true, key: "manual_usuario" });
-                    docs.push({ label: "Capturas de pantalla del programa", required: true, key: "capturas_pantalla" });
-                } else if (subtipoObra === "contratos") {
-                    docs.push({ label: "Original y copia del contrato de cesión o licencia", required: true, key: "contrato_original" });
-                }
-                // Para cualquier obra se exige identificación formal (nombre, cédula autor, etc.)
-                docs.push({ label: "Identificación obra: nombre igual al declarado en planilla", required: true, key: "identificacion_obra" });
-            }
-            return docs;
-        }
-
-        // obtener campos específicos adicionales (inputs de texto/archivos combinados)
-        function getSpecificFields(tipo, subtipoObra) {
-            let fields = [];
-            if (tipo === "patente") {
-                fields.push({ label: "Reseña detallada de la invención", type: "textarea", name: "reseña_invencion", required: true });
-                fields.push({ label: "Alcance técnico", type: "text", name: "alcance_tecnico", required: false });
-            } else if (tipo === "marca") {
-                fields.push({ label: "Primer nombre propuesto", type: "text", name: "nombre1", required: true });
-                fields.push({ label: "Segundo nombre propuesto", type: "text", name: "nombre2", required: true });
-                fields.push({ label: "Tercer nombre propuesto", type: "text", name: "nombre3", required: true });
-                fields.push({ label: "Rubros / mercados impactados", type: "textarea", name: "rubros", required: true });
-            } else if (tipo === "copyright") {
-                if (subtipoObra === "literaria") fields.push({ label: "Título de la obra literaria", type: "text", name: "titulo_obra", required: true });
-                else if (subtipoObra === "musical") fields.push({ label: "Título / Álbum", type: "text", name: "titulo_musical", required: true });
-                else if (subtipoObra === "audiovisual") fields.push({ label: "Título de la obra audiovisual", type: "text", name: "titulo_av", required: true });
-                else if (subtipoObra === "software") fields.push({ label: "Nombre del software / versión", type: "text", name: "nombre_software", required: true });
-                else fields.push({ label: "Título de la obra", type: "text", name: "titulo_generico", required: true });
-            }
-            return fields;
-        }
-
-        // RENDER VISTAS PRINCIPALES (Dashboard, nueva solicitud, pagos, perfil)
-        let currentView = "dashboard";
-
-        function renderApp() {
-            const container = document.getElementById("viewContainer");
-            if (currentView === "dashboard") renderDashboard(container);
-            else if (currentView === "new-request") renderNewRequest(container);
-            else if (currentView === "payments") renderPayments(container);
-            else if (currentView === "profile") renderProfile(container);
-        }
-
-        // Dashboard con lista de solicitudes realizadas
-        function renderDashboard(container) {
-            html = `<div class="bg-white rounded-2xl shadow-md p-6">
-            <h2 class="text-2xl font-bold text-gray-800 mb-2"><i class="fas fa-tachometer-alt text-blue-600"></i> Mis Solicitudes</h2>
-            <p class="text-gray-500 mb-6">Historial de patentes, marcas y derechos de autor.</p>`;
-            if (requests.length === 0) {
-                html += `<div class="bg-blue-50 p-6 rounded-xl text-center"><i class="fas fa-inbox text-4xl text-blue-300 mb-2"></i><p>Aún no has creado solicitudes. Comienza una nueva.</p></div>`;
+        // ========== DROPDOWN DE SOLICITUDES ==========
+        function toggleDropdown() {
+            const isOpen = dropdownMenu.classList.contains('open');
+            if (isOpen) {
+                dropdownMenu.classList.remove('open');
+                dropdownChevron.classList.remove('rotate-180');
+                dropdownToggle.setAttribute('aria-expanded', 'false');
             } else {
-                html += `<div class="overflow-x-auto"><table class="min-w-full bg-white border border-gray-200 rounded-xl"><thead class="bg-gray-100"><tr><th class="px-4 py-3 text-left">ID</th><th>Tipo</th><th>Subtipo/Obra</th><th>Monto</th><th>Estado</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody>`;
-                requests.forEach(req => {
-                    let estadoColor = req.status === 'pagado' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700';
-                    html += `<tr class="border-b"><td class="px-4 py-2 text-sm">${req.id.slice(-6)}</td>
-                <td class="px-4 py-2">${req.tipo === 'patente' ? 'Patente' : req.tipo === 'marca' ? 'Marca' : 'Derecho Autor'}</td>
-                <td class="px-4 py-2">${req.subtipo || '-'}</td>
-                <td class="px-4 py-2">$${req.monto}</td>
-                <td class="px-4 py-2"><span class="px-2 py-1 rounded-full text-xs font-semibold ${estadoColor}">${req.status === 'pagado' ? 'Pagado' : 'Pendiente'}</span></td>
-                <td class="px-4 py-2">${new Date(req.fecha).toLocaleDateString()}</td>
-                <td class="px-4 py-2">${req.status !== 'pagado' ? `<button onclick="registrarPago('${req.id}', ${req.monto})" class="bg-blue-600 text-white px-3 py-1 rounded-md text-xs hover:bg-blue-700"><i class="fas fa-money-bill-wave"></i> Pagar</button>` : '<span class="text-green-600"><i class="fas fa-check-circle"></i> Cancelado</span>'}</td></tr>`;
-                });
-                html += `</tbody></table></div>`;
+                dropdownMenu.classList.add('open');
+                dropdownChevron.classList.add('rotate-180');
+                dropdownToggle.setAttribute('aria-expanded', 'true');
             }
-            html += `</div>`;
-            container.innerHTML = html;
         }
 
-        window.registrarPago = function (requestId, monto) {
-            Swal.fire({
-                title: 'Registrar Pago',
-                html: `<p>Solicitud: ${requestId}</p><p>Monto base: $${monto}</p><input id="montoPagado" class="swal2-input" placeholder="Monto a pagar" value="${monto}">`,
-                showCancelButton: true,
-                confirmButtonText: 'Registrar pago',
-                preConfirm: () => {
-                    const montoPagado = document.getElementById('montoPagado').value;
-                    if (!montoPagado) Swal.showValidationMessage('Monto requerido');
-                    return { montoPagado };
+        dropdownToggle.addEventListener('click', toggleDropdown);
+
+        // ========== TOAST ==========
+        function showToast(mensaje) {
+            if (toastTimer) clearTimeout(toastTimer);
+            toastMsg.textContent = mensaje;
+            toast.classList.remove('hidden', 'toast-out');
+            toast.classList.add('toast');
+            // Forzar reflow para reiniciar animación
+            void toast.offsetWidth;
+            toast.classList.add('toast');
+            toastTimer = setTimeout(hideToast, 2800);
+        }
+
+        function hideToast() {
+            toast.classList.add('toast-out');
+            toast.classList.remove('toast');
+            if (toastTimer) clearTimeout(toastTimer);
+            setTimeout(() => {
+                toast.classList.add('hidden');
+                toast.classList.remove('toast-out');
+            }, 300);
+        }
+
+        // Exponer hideToast globalmente para el onclick en el HTML
+        window.hideToast = hideToast;
+
+        // ========== RENDERIZAR CHECKLIST DE DOCUMENTOS ==========
+        function renderDocumentos(tipo) {
+            const docs = documentosPorTipo[tipo] || documentosPorTipo['natural'];
+            documentChecklist.innerHTML = '';
+
+            // Resetear contador de cargados
+            documentosCargados = {};
+
+            docs.forEach((doc, index) => {
+                const docId = doc.id;
+                documentosCargados[docId] = false;
+
+                const div = document.createElement('div');
+                div.className =
+                    'doc-item flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border border-slate-200 bg-white transition-all';
+                div.setAttribute('data-doc-id', docId);
+                div.innerHTML = `
+                    <div class="flex items-start gap-3 flex-1 min-w-0">
+                        <div class="w-9 h-9 rounded-lg ${doc.bgIcono} flex items-center justify-center flex-shrink-0 mt-0.5">
+                            <i class="fa-solid ${doc.icono} ${doc.colorIcono} text-sm"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-center gap-2 flex-wrap">
+                                <span class="text-sm font-semibold text-slate-800">${doc.nombre}</span>
+                                ${doc.obligatorio
+                                    ? '<span class="text-red-500 font-bold text-xs">*</span><span class="text-[10px] text-red-400 bg-red-50 px-1.5 py-0.5 rounded-full font-medium">Obligatorio</span>'
+                                    : '<span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full font-medium">Opcional</span>'
+                                }
+                            </div>
+                            <p class="text-xs text-slate-400 mt-0.5">${doc.desc}</p>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-2 flex-shrink-0 sm:ml-auto">
+                        <input type="file" id="file-${docId}" name="file-${docId}" accept=".pdf,.jpg,.jpeg,.png"
+                            class="hidden" data-doc-id="${docId}">
+                        <label for="file-${docId}"
+                            class="upload-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 text-xs font-medium cursor-pointer hover:bg-brand-50 hover:border-brand-400 hover:text-brand-700 transition-all">
+                            <i class="fa-solid fa-upload text-[11px]"></i> Adjuntar
+                        </label>
+                        <span id="status-${docId}" class="text-[11px] font-medium text-slate-400 w-16 text-right">Pendiente</span>
+                    </div>
+                `;
+                documentChecklist.appendChild(div);
+
+                // Event listener para el input file
+                const fileInput = div.querySelector(`input[type="file"]`);
+                fileInput.addEventListener('change', function() {
+                    handleFileUpload(this, docId);
+                });
+            });
+
+            actualizarContador();
+        }
+
+        // ========== MANEJAR CARGA DE ARCHIVO ==========
+        function handleFileUpload(input, docId) {
+            const statusSpan = document.getElementById('status-' + docId);
+            const docItem = input.closest('.doc-item');
+
+            if (input.files && input.files.length > 0) {
+                const file = input.files[0];
+                const maxSize = 10 * 1024 * 1024; // 10 MB
+
+                if (file.size > maxSize) {
+                    statusSpan.textContent = 'Excede 10MB';
+                    statusSpan.className = 'text-[11px] font-medium text-red-500 w-16 text-right';
+                    docItem.classList.add('border-red-300', 'bg-red-50/30');
+                    showToast('El archivo excede el tamaño máximo de 10 MB.');
+                    input.value = '';
+                    return;
                 }
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    const pagoMonto = parseFloat(result.value.montoPagado);
-                    const solicitud = requests.find(r => r.id === requestId);
-                    if (solicitud && solicitud.status !== 'pagado') {
-                        solicitud.status = 'pagado';
-                        const nuevoPago = {
-                            id: generateId(),
-                            requestId: requestId,
-                            monto: pagoMonto,
-                            fecha: new Date().toISOString(),
-                            tipo: solicitud.tipo,
-                        };
-                        payments.push(nuevoPago);
-                        saveRequests();
-                        savePayments();
-                        Swal.fire('Éxito', 'Pago registrado correctamente', 'success');
-                        renderApp();
-                    } else {
-                        Swal.fire('Error', 'Solicitud ya pagada o no existe', 'error');
-                    }
-                }
-            });
-        };
 
-        // Vista Pagos realizados
-        function renderPayments(container) {
-            let html = `<div class="bg-white rounded-2xl shadow-md p-6"><h2 class="text-2xl font-bold mb-4"><i class="fas fa-receipt text-green-600"></i> Pagos Realizados</h2>`;
-            if (payments.length === 0) html += `<div class="text-center text-gray-500 py-8">No hay pagos registrados aún.</div>`;
-            else {
-                html += `<div class="space-y-3">`;
-                payments.forEach(p => {
-                    const solicitud = requests.find(r => r.id === p.requestId);
-                    const tipoNombre = solicitud ? (solicitud.tipo === 'patente' ? 'Patente' : solicitud.tipo === 'marca' ? 'Marca' : 'Derecho Autor') : 'Registro';
-                    html += `<div class="border p-4 rounded-lg flex justify-between items-center"><div><p class="font-semibold">${tipoNombre} - ID: ${p.requestId.slice(-8)}</p><p class="text-sm text-gray-500">${new Date(p.fecha).toLocaleString()}</p></div><div class="text-lg font-bold text-green-700">$${p.monto}</div></div>`;
-                });
-                html += `</div>`;
+                // Simular carga exitosa
+                documentosCargados[docId] = true;
+                statusSpan.textContent = 'Cargado ✓';
+                statusSpan.className = 'text-[11px] font-medium text-emerald-600 w-16 text-right';
+                docItem.classList.remove('border-red-300', 'bg-red-50/30');
+                docItem.classList.add('border-emerald-200', 'bg-emerald-50/20');
+
+                // Mostrar toast
+                showToast(`"${file.name}" cargado correctamente.`);
+            } else {
+                documentosCargados[docId] = false;
+                statusSpan.textContent = 'Pendiente';
+                statusSpan.className = 'text-[11px] font-medium text-slate-400 w-16 text-right';
+                docItem.classList.remove('border-emerald-200', 'bg-emerald-50/20', 'border-red-300',
+                'bg-red-50/30');
             }
-            html += `</div>`;
-            container.innerHTML = html;
+            actualizarContador();
         }
 
-        // Perfil con subida de documentos personales
-        function renderProfile(container) {
-            let tipos = [{ value: "natural", label: "Persona Natural" }, { value: "juridico", label: "Persona Jurídica" }, { value: "ente", label: "Ente del Estado" }];
-            let html = `<div class="bg-white rounded-2xl shadow-md p-6"><h2 class="text-2xl font-bold mb-4"><i class="fas fa-id-card"></i> Verificación de Identidad</h2>
-        <p class="text-gray-500 mb-4">Sube tus documentos personales para validar tu perfil ante la plataforma.</p>
-        <div class="mb-4"><label class="block font-medium">Tipo de solicitante principal</label><select id="profileTipo" class="mt-1 p-2 border rounded w-full">${tipos.map(t => `<option value="${t.value}" ${userProfile.tipoSolicitante === t.value ? 'selected' : ''}>${t.label}</option>`).join('')}</select></div>
-        <div><label class="block font-medium">Nombre / Razón Social</label><input type="text" id="profileNombre" class="mt-1 p-2 border rounded w-full" value="${userProfile.nombreCompleto || ''}"></div>
-        <div class="mt-3"><label class="block font-medium">RIF</label><input type="text" id="profileRif" class="mt-1 p-2 border rounded w-full" value="${userProfile.rif || ''}"></div>
-        <div class="mt-3"><label class="block font-medium">Cédula / Pasaporte</label><input type="text" id="profileCedula" class="mt-1 p-2 border rounded w-full" value="${userProfile.cedula || ''}"></div>
-        <div class="mt-5"><label class="block font-bold">Documentos adjuntos de verificación (copia cédula, RIF, etc)</label>
-        <div id="profileDocsList" class="mt-2 space-y-2"></div>
-        <input type="file" id="newDocUpload" class="mt-2 text-sm"><button id="addProfileDocBtn" class="mt-2 bg-gray-700 text-white px-3 py-1 rounded text-sm">Agregar documento</button>
-        </div>
-        <button id="saveProfileBtn" class="mt-6 bg-blue-700 text-white px-5 py-2 rounded-lg w-full">Guardar Perfil</button></div>`;
-            container.innerHTML = html;
-            function refreshDocsList() {
-                const containerDocs = document.getElementById("profileDocsList");
-                if (containerDocs) {
-                    containerDocs.innerHTML = userProfile.documentos.map((doc, idx) => `<div class="flex justify-between items-center bg-gray-100 p-2 rounded"><span><i class="fas fa-file-alt"></i> ${doc.name}</span><button onclick="removeDoc(${idx})" class="text-red-500 text-xs"><i class="fas fa-trash"></i></button></div>`).join('');
-                }
+        // ========== ACTUALIZAR CONTADOR ==========
+        function actualizarContador() {
+            const total = Object.keys(documentosCargados).length;
+            const cargados = Object.values(documentosCargados).filter(v => v === true).length;
+            docCounter.textContent = `${cargados} / ${total} cargados`;
+
+            if (cargados === total && total > 0) {
+                docCounter.classList.remove('bg-slate-100', 'text-slate-500');
+                docCounter.classList.add('bg-emerald-100', 'text-emerald-700');
+            } else if (cargados > 0) {
+                docCounter.classList.remove('bg-slate-100', 'text-slate-500', 'bg-emerald-100', 'text-emerald-700');
+                docCounter.classList.add('bg-brand-100', 'text-brand-700');
+            } else {
+                docCounter.classList.remove('bg-emerald-100', 'text-emerald-700', 'bg-brand-100', 'text-brand-700');
+                docCounter.classList.add('bg-slate-100', 'text-slate-500');
             }
-            window.removeDoc = function (idx) { userProfile.documentos.splice(idx, 1); saveProfile(); refreshDocsList(); };
-            document.getElementById("addProfileDocBtn")?.addEventListener("click", () => {
-                const fileInput = document.getElementById("newDocUpload");
-                if (fileInput.files.length) {
-                    const file = fileInput.files[0];
-                    userProfile.documentos.push({ name: file.name, lastModified: new Date().toISOString() });
-                    saveProfile();
-                    refreshDocsList();
-                    fileInput.value = '';
-                    Swal.fire("Documento agregado", "Se ha guardado referencia", "success");
-                } else Swal.fire("Selecciona un archivo", "", "warning");
-            });
-            document.getElementById("saveProfileBtn")?.addEventListener("click", () => {
-                userProfile.tipoSolicitante = document.getElementById("profileTipo").value;
-                userProfile.nombreCompleto = document.getElementById("profileNombre").value;
-                userProfile.rif = document.getElementById("profileRif").value;
-                userProfile.cedula = document.getElementById("profileCedula").value;
-                saveProfile();
-                Swal.fire("Perfil actualizado", "Documentos verificados guardados", "success");
-            });
-            refreshDocsList();
         }
 
-        // Formulario de Nueva Solicitud dinámico usando condiciones
-        function renderNewRequest(container) {
-            let html = `<div class="bg-white rounded-2xl shadow-md p-6"><h2 class="text-2xl font-bold mb-4"><i class="fas fa-file-signature"></i> Nueva Solicitud de Propiedad Industrial</h2>
-        <div class="grid md:grid-cols-2 gap-4 mb-6">
-            <div><label class="font-semibold">Tipo de solicitud</label><select id="reqType" class="w-full p-2 border rounded mt-1"><option value="patente">Patente</option><option value="marca">Marca</option><option value="copyright">Derecho de Autor</option></select></div>
-            <div id="subtipoContainer" style="display:none;"><label class="font-semibold">Subtipo (Derecho de Autor)</label><select id="subtypeObra" class="w-full p-2 border rounded mt-1"><option value="literaria">Obra Literaria</option><option value="musical">Obra Musical</option><option value="fonografica">Producción Fonográfica</option><option value="audiovisual">Audiovisual / Radiofónica</option><option value="radiofonica">Obra Radiofónica</option><option value="artevisual">Arte Visual</option><option value="software">Programas Computación / BD</option><option value="contratos">Actos y Contratos</option></select></div>
-            <div><label class="font-semibold">Tipo de Solicitante</label><select id="solicitanteType" class="w-full p-2 border rounded mt-1"><option value="natural">Persona Natural</option><option value="juridico">Persona Jurídica</option><option value="ente">Entes / Empresas del Estado</option></select></div>
-            <div><label class="flex items-center gap-2 mt-6"><input type="checkbox" id="hasApoderado"> <span>¿Cuenta con Apoderado/Agente PI?</span></label></div>
-        </div>
-        <div id="camposEspecificos" class="border-t pt-4 mb-4"></div>
-        <div id="listaRequisitosDoc" class="mb-5"></div>
-        <div class="mb-4"><label class="font-bold">Monto a pagar (US$ / Moneda local) *</label><input type="number" id="montoSolicitud" class="w-full p-2 border rounded" placeholder="Ej: 250" required></div>
-        <button id="guardarSolicitudBtn" class="bg-green-700 text-white px-6 py-2 rounded-lg w-full">Registrar Solicitud y Monto</button>
-        </div>`;
-            container.innerHTML = html;
-            const reqTypeSelect = document.getElementById("reqType");
-            const subtipoContainer = document.getElementById("subtipoContainer");
-            const solicitanteType = document.getElementById("solicitanteType");
-            const hasApoderadoCheck = document.getElementById("hasApoderado");
-            const camposEspecificosDiv = document.getElementById("camposEspecificos");
-            const requisitosDiv = document.getElementById("listaRequisitosDoc");
-
-            function updateForm() {
-                let tipo = reqTypeSelect.value;
-                let subtipo = document.getElementById("subtypeObra")?.value || null;
-                if (tipo === "copyright") subtipoContainer.style.display = "block";
-                else subtipoContainer.style.display = "none";
-                let tipoSol = solicitanteType.value;
-                let conApoderado = hasApoderadoCheck.checked;
-                // render campos específicos (text inputs)
-                let specific = getSpecificFields(tipo, subtipo);
-                camposEspecificosDiv.innerHTML = `<h3 class="font-semibold text-md">Información del producto/obra</h3>` + specific.map(f =>
-                    `<div class="mb-3"><label>${f.label} ${f.required ? '*' : ''}</label>${f.type === 'textarea' ? `<textarea name="${f.name}" class="w-full p-2 border rounded"></textarea>` : `<input type="${f.type}" name="${f.name}" class="w-full p-2 border rounded" />`}</div>`
-                ).join('');
-                // obtener requisitos documentales según el documento
-                let docs = getRequisitosDocumentales(tipo, subtipo, tipoSol, conApoderado);
-                requisitosDiv.innerHTML = `<h3 class="font-semibold text-lg mb-2">Documentos obligatorios (adjuntar según corresponda)</h3><div class="grid gap-3">` + docs.map((doc, idx) => `
-                <div class="flex flex-col border p-3 rounded-lg bg-gray-50"><span class="font-medium">${doc.label} ${doc.required ? '(Obligatorio)' : '(Recomendado)'}</span>
-                <input type="file" data-doc-key="${doc.key}" class="mt-1 text-sm doc-file-input" accept=".pdf,.jpg,.png,.txt,.doc">
-                <small class="text-gray-400">Subir documento digital (simulación)</small></div>`).join('') + `</div>`;
-            }
-            reqTypeSelect.addEventListener("change", updateForm);
-            solicitanteType.addEventListener("change", updateForm);
-            hasApoderadoCheck.addEventListener("change", updateForm);
-            document.addEventListener("change", (e) => { if (e.target.id === "subtypeObra") updateForm(); });
-            updateForm();
-
-            document.getElementById("guardarSolicitudBtn").addEventListener("click", () => {
-                let tipo = reqTypeSelect.value;
-                let subtipo = tipo === "copyright" ? document.getElementById("subtypeObra").value : null;
-                let tipoSol = solicitanteType.value;
-                let conApoderado = hasApoderadoCheck.checked;
-                let monto = parseFloat(document.getElementById("montoSolicitud").value);
-                if (isNaN(monto) || monto <= 0) { Swal.fire("Error", "Debe indicar un monto válido", "error"); return; }
-                // Recoger campos específicos
-                let specificData = {};
-                document.querySelectorAll("#camposEspecificos input, #camposEspecificos textarea").forEach(inp => { if (inp.name) specificData[inp.name] = inp.value; });
-                // recoger archivos simulados (guardamos nombres)
-                let documentosAdjuntos = [];
-                document.querySelectorAll(".doc-file-input").forEach(fileInp => {
-                    if (fileInp.files.length > 0) {
-                        let fileName = fileInp.files[0].name;
-                        let key = fileInp.getAttribute("data-doc-key");
-                        documentosAdjuntos.push({ key, name: fileName });
-                    }
-                });
-                let nuevaSolicitud = {
-                    id: generateId(),
-                    tipo: tipo,
-                    subtipo: subtipo,
-                    tipoSolicitante: tipoSol,
-                    conApoderado: conApoderado,
-                    monto: monto,
-                    status: "pendiente",
-                    fecha: new Date().toISOString(),
-                    specificData: specificData,
-                    documentosAdjuntos: documentosAdjuntos
-                };
-                requests.unshift(nuevaSolicitud);
-                saveRequests();
-                Swal.fire("Solicitud creada", `Registro #${nuevaSolicitud.id.slice(-8)} creado con monto $${monto}. Estado pendiente de pago.`, "success").then(() => {
-                    currentView = "dashboard";
-                    renderApp();
-                    highlightSidebar();
-                });
-            });
+        // ========== MANEJAR CAMBIO DE TIPO DE SOLICITANTE ==========
+        function handleTipoChange(tipo) {
+            renderDocumentos(tipo);
+            // Efecto visual de actualización
+            const seccionDocs = document.getElementById('seccionDocumentos');
+            seccionDocs.style.transition = 'none';
+            seccionDocs.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.25)';
+            setTimeout(() => {
+                seccionDocs.style.transition = 'box-shadow 400ms ease';
+                seccionDocs.style.boxShadow = '';
+            }, 600);
+            showToast('Lista de documentos actualizada según el tipo de solicitante.');
         }
 
-        function highlightSidebar() {
-            document.querySelectorAll('.sidebar-item').forEach(item => {
-                item.classList.remove('active', 'bg-blue-700', 'text-white');
-                if (item.getAttribute('data-view') === currentView) {
-                    item.classList.add('active', 'bg-blue-700', 'text-white');
+        radioGroup.forEach(radio => {
+            radio.addEventListener('change', function() {
+                if (this.checked) {
+                    handleTipoChange(this.value);
                 }
             });
-        }
+        });
 
-        // Event listeners y navegación
-        function bindNavigation() {
-            document.querySelectorAll('.sidebar-item').forEach(link => {
-                link.addEventListener('click', (e) => {
-                    e.preventDefault();
-                    const view = link.getAttribute('data-view');
-                    if (view) { currentView = view; renderApp(); highlightSidebar(); }
+        // ========== VALIDACIÓN Y ENVÍO ==========
+        btnEnviar.addEventListener('click', function() {
+            const tipoSeleccionado = document.querySelector('input[name="tipoSolicitante"]:checked');
+            const tipo = tipoSeleccionado ? tipoSeleccionado.value : null;
+            const titulo = tituloInvencion.value.trim();
+            const resenaText = resena.value.trim();
+            const docs = documentosPorTipo[tipo] || [];
+            const docsObligatorios = docs.filter(d => d.obligatorio);
+            const docsFaltantes = docsObligatorios.filter(d => !documentosCargados[d.id]);
+
+            let errores = [];
+
+            if (!tipo) errores.push('Debe seleccionar un tipo de solicitante.');
+            if (!titulo) errores.push('El título de la invención es obligatorio.');
+            if (!resenaText || resenaText.length < 20)
+            errores.push('La reseña y alcance debe tener al menos 20 caracteres.');
+            if (docsFaltantes.length > 0) {
+                const nombresFaltantes = docsFaltantes.map(d => d.nombre).join(', ');
+                errores.push(`Faltan documentos obligatorios: ${nombresFaltantes}.`);
+            }
+
+            if (errores.length > 0) {
+                // Mostrar errores como toast
+                errores.forEach((err, i) => {
+                    setTimeout(() => showToast('⚠️ ' + err), i * 400);
                 });
+                // Hacer scroll a la primera sección con error
+                const primeraSeccion = document.getElementById('seccionInformacion');
+                if (primeraSeccion) {
+                    primeraSeccion.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                }
+                // Resaltar campos vacíos
+                if (!titulo) {
+                    tituloInvencion.classList.add('border-red-400', 'bg-red-50/30');
+                    tituloInvencion.focus();
+                    setTimeout(() => tituloInvencion.classList.remove('border-red-400', 'bg-red-50/30'), 2500);
+                }
+                if (!resenaText || resenaText.length < 20) {
+                    resena.classList.add('border-red-400', 'bg-red-50/30');
+                    resena.focus();
+                    setTimeout(() => resena.classList.remove('border-red-400', 'bg-red-50/30'), 2500);
+                }
+                return;
+            }
+
+            // Simular envío exitoso
+            showToast('✅ Solicitud de patente enviada exitosamente. Recibirá una confirmación por correo.');
+            btnEnviar.disabled = true;
+            btnEnviar.innerHTML =
+                '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Enviando...';
+            btnEnviar.classList.add('opacity-70', 'cursor-not-allowed');
+
+            setTimeout(() => {
+                btnEnviar.disabled = false;
+                btnEnviar.innerHTML =
+                '<i class="fa-solid fa-paper-plane mr-1.5"></i> Enviar Solicitud';
+                btnEnviar.classList.remove('opacity-70', 'cursor-not-allowed');
+                // Avanzar stepper visualmente
+                avanzarStepper();
+            }, 2000);
+        });
+
+        // ========== AVANZAR STEPPER (SIMULACIÓN) ==========
+        function avanzarStepper() {
+            const dots = document.querySelectorAll('.stepper-dot');
+            const lines = document.querySelectorAll('.stepper-line');
+            dots.forEach((dot, i) => {
+                if (i < 3) {
+                    dot.classList.add('done');
+                    dot.classList.remove('active');
+                    dot.innerHTML = '<i class="fa-solid fa-check text-[11px]"></i>';
+                }
+                if (i === 3) {
+                    dot.classList.add('active');
+                    dot.classList.remove('done');
+                    dot.innerHTML = '4';
+                }
             });
+            lines.forEach(line => line.classList.add('done'));
         }
 
-        loadData();
-        renderApp();
-        bindNavigation();
-        highlightSidebar();
-    </script>
+        // ========== INICIALIZACIÓN ==========
+        function init() {
+            // Obtener el tipo seleccionado por defecto
+            const tipoInicial = document.querySelector('input[name="tipoSolicitante"]:checked');
+            const tipo = tipoInicial ? tipoInicial.value : 'entes';
+            renderDocumentos(tipo);
+        }
+
+        // ========== RESPONSIVE: AJUSTAR AL REDIMENSIONAR ==========
+        function handleResize() {
+            if (window.innerWidth >= 1024) {
+                // En desktop, asegurar que el sidebar esté visible y sin overlay
+                sidebar.classList.remove('open');
+                overlay.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+
+        window.addEventListener('resize', handleResize);
+
+        // ========== EXPONER FUNCIONES GLOBALES ==========
+        window.openSidebar = openSidebar;
+        window.closeSidebar = closeSidebar;
+
+        // ========== ARRANCAR ==========
+        init();
+
+        console.log('%c🚀 SAPI · Gestión de Trámites Legales %c| %cLayout Principal + Página de Patente',
+            'color: #2563eb; font-weight: bold; font-size: 14px;',
+            '',
+            'color: #64748b;');
+        console.log('%c✔ Sidebar con dropdown funcional', 'color: #10b981;');
+        console.log('%c✔ Selector de tipo de solicitante con cambio dinámico de documentos',
+        'color: #10b981;');
+        console.log('%c✔ Checklist de documentos con carga de archivos', 'color: #10b981;');
+        console.log('%c✔ Validaciones visuales y feedback toast', 'color: #10b981;');
+        console.log('%c📱 Diseño completamente responsivo', 'color: #8b5cf6;');
+    })();
+</script>
 </body>
-
 </html>

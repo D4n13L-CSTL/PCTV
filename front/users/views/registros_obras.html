@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SAPI · Registro de Obras</title>
+
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com">
+    </script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#eff6ff', 100: '#dbeafe', 200: '#bfdbfe', 300: '#93c5fd', 400: '#60a5fa',
+                            500: '#3b82f6', 600: '#2563eb', 700: '#1d4ed8', 800: '#1e40af', 900: '#1e3a8a',
+                            950: '#172554',
+                        },
+                        slate: {
+                            750: '#2d3748', 850: '#1a202c', 950: '#0f172a',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'sans-serif'],
+                    },
+                }
+            }
+        }
+    </script>
+
+    <!-- Font Awesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <style>
+        :root { --sidebar-width: 264px; --transition-speed: 220ms; }
+        .sidebar-scroll::-webkit-scrollbar { width: 4px; }
+        .sidebar-scroll::-webkit-scrollbar-track { background: transparent; }
+        .sidebar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.12); border-radius: 8px; }
+        .sidebar-scroll::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.22); }
+        .sidebar { width: var(--sidebar-width); transition: transform var(--transition-speed) cubic-bezier(0.4,0,0.2,1), width var(--transition-speed); will-change: transform; z-index: 40; }
+        .sidebar-overlay { transition: opacity var(--transition-speed) ease; pointer-events: none; opacity: 0; z-index: 35; }
+        .sidebar-overlay.active { pointer-events: auto; opacity: 1; }
+        .dropdown-menu { overflow: hidden; max-height: 0; transition: max-height 350ms cubic-bezier(0.4,0,0.2,1), opacity 250ms ease, margin 300ms ease; opacity: 0; margin-top: 0; }
+        .dropdown-menu.open { max-height: 320px; opacity: 1; margin-top: 4px; }
+        .radio-card input[type="radio"] { position: absolute; opacity: 0; pointer-events: none; }
+        .radio-card { transition: all 180ms ease; cursor: pointer; border: 2px solid transparent; }
+        .radio-card:has(input:checked) { border-color: #2563eb; background-color: #eff6ff; box-shadow: 0 0 0 3px rgba(37,99,235,0.10); }
+        .radio-card:hover { border-color: #93c5fd; background-color: #f8fafc; }
+        .radio-card .check-indicator { transition: all 200ms ease; opacity: 0; transform: scale(0.6); }
+        .radio-card:has(input:checked) .check-indicator { opacity: 1; transform: scale(1); }
+        .doc-item { transition: all 200ms ease; }
+        .doc-item:hover { background-color: #f8fafc; }
+        .doc-item .upload-btn { transition: all 150ms ease; }
+        .doc-item .upload-btn:hover { background-color: #2563eb; color: white; }
+        .stepper-dot { transition: all 300ms ease; }
+        .stepper-dot.active { background-color: #2563eb; box-shadow: 0 0 0 6px rgba(37,99,235,0.18); }
+        .stepper-dot.done { background-color: #10b981; box-shadow: 0 0 0 4px rgba(16,185,129,0.14); }
+        .stepper-line { transition: background-color 400ms ease; }
+        .stepper-line.done { background-color: #10b981; }
+        .toast { animation: slideInRight 350ms cubic-bezier(0.22,0.61,0.36,1) forwards; }
+        @keyframes slideInRight { from { transform: translateX(120%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        .toast-out { animation: slideOutRight 300ms cubic-bezier(0.55,0,1,0.45) forwards; }
+        @keyframes slideOutRight { from { transform: translateX(0); opacity: 1; } to { transform: translateX(120%); opacity: 0; } }
+        @media (max-width: 1023px) {
+            .sidebar { position: fixed; top:0; left:0; height: 100vh; height: 100dvh; transform: translateX(-100%); width: 280px; box-shadow: 8px 0 30px rgba(0,0,0,0.25); }
+            .sidebar.open { transform: translateX(0); }
+            .main-content { margin-left: 0 !important; width: 100% !important; }
+        }
+        @media (min-width: 1024px) {
+            .sidebar { transform: translateX(0) !important; }
+            .sidebar-overlay { display: none !important; }
+            .main-content { margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width)); }
+        }
+        @keyframes softPulse { 0%,100%{opacity:1;} 50%{opacity:0.5;} }
+        .pulse-dot { animation: softPulse 2s ease-in-out infinite; }
+        *:focus-visible { outline: 2px solid #3b82f6; outline-offset: 2px; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-slate-50 font-sans text-slate-700 antialiased min-h-screen">
+
+    <!-- Overlay móvil -->
+    <div id="sidebarOverlay" class="sidebar-overlay fixed inset-0 bg-black/50 z-[35] lg:hidden" onclick="closeSidebar()" aria-hidden="true"></div>
+
+    <!-- SIDEBAR -->
+    {% include "partials/sidebar.html" %}
+
+    <!-- CONTENIDO PRINCIPAL -->
+    <main id="mainContent" class="main-content transition-all duration-300 min-h-screen flex flex-col" style="margin-left: var(--sidebar-width); width: calc(100% - var(--sidebar-width));">
+        <header class="sticky top-0 z-30 bg-white/80 backdrop-blur-lg border-b border-slate-200/80 flex items-center justify-between px-5 lg:px-8 h-16 flex-shrink-0">
+            <button onclick="openSidebar()" class="lg:hidden text-slate-600 hover:text-brand-600 transition-colors p-2 -ml-2 rounded-lg hover:bg-slate-100" aria-label="Abrir menú"><i class="fa-solid fa-bars text-xl"></i></button>
+            <div class="flex items-center gap-2 text-sm text-slate-500">
+                <i class="fa-solid fa-paintbrush text-brand-500"></i>
+                <span class="hidden sm:inline text-slate-400">Solicitudes</span>
+                <i class="fa-solid fa-chevron-right text-[9px] text-slate-300 hidden sm:inline"></i>
+                <span class="font-semibold text-slate-700">Registro de Obras</span>
+            </div>
+            <div class="flex items-center gap-3">
+                <button class="relative p-2 rounded-lg text-slate-400 hover:text-brand-600 hover:bg-brand-50 transition-all" aria-label="Notificaciones"><i class="fa-solid fa-bell text-lg"></i><span class="absolute top-1 right-1 w-2.5 h-2.5 bg-red-500 rounded-full pulse-dot border-2 border-white"></span></button>
+                <div class="lg:hidden w-8 h-8 rounded-full bg-gradient-to-br from-brand-400 to-brand-600 flex items-center justify-center text-white text-xs font-bold">AG</div>
+            </div>
+        </header>
+
+        <div class="flex-1 p-4 sm:p-6 lg:p-8 overflow-y-auto">
+            <div class="max-w-4xl mx-auto space-y-6">
+
+                <!-- STEPPER -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/70 p-5 sm:p-7">
+                    <div class="flex items-center justify-between mb-8 max-w-md mx-auto">
+                        <div class="flex flex-col items-center gap-1.5 relative"><div class="stepper-dot active w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm z-10 bg-brand-600 shadow-lg shadow-brand-500/25">1</div><span class="text-[11px] font-semibold text-brand-600 whitespace-nowrap">Tipo de Solicitante</span></div>
+                        <div class="flex-1 h-[2px] bg-slate-200 stepper-line -mx-2 relative -top-4"></div>
+                        <div class="flex flex-col items-center gap-1.5 relative"><div class="stepper-dot w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm z-10 bg-slate-300">2</div><span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">Información</span></div>
+                        <div class="flex-1 h-[2px] bg-slate-200 stepper-line -mx-2 relative -top-4"></div>
+                        <div class="flex flex-col items-center gap-1.5 relative"><div class="stepper-dot w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm z-10 bg-slate-300">3</div><span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">Documentos</span></div>
+                        <div class="flex-1 h-[2px] bg-slate-200 stepper-line -mx-2 relative -top-4"></div>
+                        <div class="flex flex-col items-center gap-1.5 relative"><div class="stepper-dot w-9 h-9 rounded-full flex items-center justify-center text-white font-bold text-sm z-10 bg-slate-300">4</div><span class="text-[11px] font-medium text-slate-400 whitespace-nowrap">Enviar</span></div>
+                    </div>
+
+                    <!-- SELECTOR TIPO DE SOLICITANTE -->
+                    <section aria-labelledby="tipoSolicitanteHeading">
+                        <div class="flex items-center gap-2 mb-4"><h2 id="tipoSolicitanteHeading" class="text-base font-semibold text-slate-800">Tipo de Solicitante</h2><span class="text-red-500 font-bold text-sm">*</span><span class="text-[11px] text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">Obligatorio</span></div>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3" role="radiogroup" aria-label="Seleccionar tipo de solicitante">
+                            <label class="radio-card flex items-start gap-3 p-4 rounded-xl bg-white border-2 border-slate-200 cursor-pointer relative"><input type="radio" name="tipoSolicitante" value="entes" checked><div class="flex-shrink-0 w-8 h-8 rounded-lg bg-amber-50 flex items-center justify-center mt-0.5"><i class="fa-solid fa-building-columns text-amber-600 text-sm"></i></div><div class="flex-1 min-w-0"><p class="text-sm font-semibold text-slate-800">Entes del Estado</p><p class="text-[11px] text-slate-400 mt-0.5">Empresas y organismos públicos</p></div><div class="check-indicator absolute top-2 right-2 w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center"><i class="fa-solid fa-check text-white text-[9px]"></i></div></label>
+                            <label class="radio-card flex items-start gap-3 p-4 rounded-xl bg-white border-2 border-slate-200 cursor-pointer relative"><input type="radio" name="tipoSolicitante" value="natural"><div class="flex-shrink-0 w-8 h-8 rounded-lg bg-emerald-50 flex items-center justify-center mt-0.5"><i class="fa-solid fa-user text-emerald-600 text-sm"></i></div><div class="flex-1 min-w-0"><p class="text-sm font-semibold text-slate-800">Persona Natural</p><p class="text-[11px] text-slate-400 mt-0.5">Ciudadano individual</p></div><div class="check-indicator absolute top-2 right-2 w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center"><i class="fa-solid fa-check text-white text-[9px]"></i></div></label>
+                            <label class="radio-card flex items-start gap-3 p-4 rounded-xl bg-white border-2 border-slate-200 cursor-pointer relative"><input type="radio" name="tipoSolicitante" value="juridica"><div class="flex-shrink-0 w-8 h-8 rounded-lg bg-purple-50 flex items-center justify-center mt-0.5"><i class="fa-solid fa-building text-purple-600 text-sm"></i></div><div class="flex-1 min-w-0"><p class="text-sm font-semibold text-slate-800">Persona Jurídica</p><p class="text-[11px] text-slate-400 mt-0.5">Empresas y sociedades</p></div><div class="check-indicator absolute top-2 right-2 w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center"><i class="fa-solid fa-check text-white text-[9px]"></i></div></label>
+                            <label class="radio-card flex items-start gap-3 p-4 rounded-xl bg-white border-2 border-slate-200 cursor-pointer relative"><input type="radio" name="tipoSolicitante" value="apoderado"><div class="flex-shrink-0 w-8 h-8 rounded-lg bg-rose-50 flex items-center justify-center mt-0.5"><i class="fa-solid fa-file-contract text-rose-600 text-sm"></i></div><div class="flex-1 min-w-0"><p class="text-sm font-semibold text-slate-800">Apoderado/Agente</p><p class="text-[11px] text-slate-400 mt-0.5">Representante legal</p></div><div class="check-indicator absolute top-2 right-2 w-5 h-5 rounded-full bg-brand-600 flex items-center justify-center"><i class="fa-solid fa-check text-white text-[9px]"></i></div></label>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- INFORMACIÓN DE LA OBRA (DINÁMICO SEGÚN TIPO) -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/70 p-5 sm:p-7 space-y-5" id="seccionInformacion">
+                    <div class="flex items-center gap-2 mb-2">
+                        <h2 class="text-base font-semibold text-slate-800">Información de la Obra</h2>
+                        <span class="text-red-500 font-bold text-sm">*</span>
+                    </div>
+
+                    <!-- Selector de tipo de obra -->
+                    <div>
+                        <label for="tipoObra" class="block text-sm font-medium text-slate-700 mb-1.5">Tipo de Obra <span class="text-red-500">*</span></label>
+                        <select id="tipoObra" required class="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-800 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-all text-sm">
+                            <option value="" disabled selected>Seleccione un tipo</option>
+                            <option value="literaria">Obra Literaria</option>
+                            <option value="musical">Obra Musical</option>
+                            <option value="fonografica">Producción Fonográfica</option>
+                            <option value="audiovisual">Obra Audiovisual</option>
+                            <option value="radiofonica">Obra Radiofónica</option>
+                            <option value="arte_visual">Obra de Arte Visual</option>
+                            <option value="software">Programas de Computación / BD</option>
+                            <option value="actos_contratos">Actos y Contratos</option>
+                        </select>
+                    </div>
+
+                    <!-- Contenedor de campos dinámicos según tipo de obra -->
+                    <div id="camposEspecificos" class="space-y-4 pt-2">
+                        <!-- Se llena con JS -->
+                    </div>
+                </div>
+
+                <!-- CHECKLIST DE DOCUMENTOS (DINÁMICO SEGÚN TIPO DE SOLICITANTE + TIPO DE OBRA) -->
+                <div class="bg-white rounded-2xl shadow-sm border border-slate-200/70 p-5 sm:p-7 space-y-5" id="seccionDocumentos">
+                    <div class="flex items-center justify-between flex-wrap gap-2">
+                        <div class="flex items-center gap-2"><h2 class="text-base font-semibold text-slate-800">Documentos a Consignar</h2><span class="text-red-500 font-bold text-sm">*</span></div>
+                        <span id="docCounter" class="text-xs font-medium text-slate-500 bg-slate-100 px-3 py-1 rounded-full">0 / 0 cargados</span>
+                    </div>
+                    <p class="text-sm text-slate-500 -mt-2">Adjunte cada documento en formato PDF o JPG (máx. 10 MB). Los marcados con <span class="text-red-500 font-bold">*</span> son obligatorios.</p>
+                    <div id="documentChecklist" class="space-y-2 mt-3"><!-- Dinámico --></div>
+                </div>
+
+                <!-- BOTONES -->
+                <div class="flex flex-col sm:flex-row gap-3 justify-end">
+                    <button type="button" class="order-2 sm:order-1 px-5 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-medium text-sm hover:bg-slate-50 hover:border-slate-400 transition-all"><i class="fa-solid fa-floppy-disk mr-1.5"></i> Guardar borrador</button>
+                    <button type="button" id="btnEnviar" class="order-1 sm:order-2 px-6 py-2.5 rounded-lg bg-brand-600 text-white font-semibold text-sm hover:bg-brand-700 active:bg-brand-800 transition-all shadow-md shadow-brand-500/20 hover:shadow-lg hover:shadow-brand-500/30"><i class="fa-solid fa-paper-plane mr-1.5"></i> Enviar Solicitud</button>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- TOAST -->
+    <div id="toast" class="fixed top-5 right-5 z-50 hidden toast pointer-events-none" role="alert" aria-live="polite">
+        <div class="bg-white rounded-xl shadow-xl border border-slate-200 px-5 py-4 flex items-center gap-3 max-w-sm pointer-events-auto">
+            <div class="w-9 h-9 rounded-full bg-emerald-100 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-check text-emerald-600 text-sm"></i></div>
+            <div><p class="text-sm font-semibold text-slate-800">Cambios aplicados</p><p class="text-xs text-slate-500" id="toastMsg">La lista de documentos se ha actualizado.</p></div>
+            <button onclick="hideToast()" class="ml-auto text-slate-400 hover:text-slate-600 transition-colors flex-shrink-0"><i class="fa-solid fa-xmark text-sm"></i></button>
+        </div>
+    </div>
+
+    <script>
+        (function() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            const dropdownToggle = document.getElementById('dropdownToggle');
+            const dropdownMenu = document.getElementById('dropdownSolicitudes');
+            const dropdownChevron = document.getElementById('dropdownChevron');
+            const documentChecklist = document.getElementById('documentChecklist');
+            const docCounter = document.getElementById('docCounter');
+            const radioGroup = document.querySelectorAll('input[name="tipoSolicitante"]');
+            const btnEnviar = document.getElementById('btnEnviar');
+            const toast = document.getElementById('toast');
+            const toastMsg = document.getElementById('toastMsg');
+            const tipoObraSelect = document.getElementById('tipoObra');
+            const camposEspecificos = document.getElementById('camposEspecificos');
+
+            let toastTimer = null;
+            let documentosCargados = {};
+
+            // Documentos administrativos por tipo de solicitante (base similar a otros módulos)
+            const docsAdminPorTipo = {
+                'entes': [
+                    { id: 'gaceta_creacion', nombre: 'Copia de Gaceta Oficial de creación del ente', obligatorio: true, icono: 'fa-newspaper', colorIcono: 'text-amber-600', bgIcono: 'bg-amber-50' },
+                    { id: 'gaceta_acta', nombre: 'Gaceta Oficial del Acta Constitutiva (S.A./Fundación)', obligatorio: false, icono: 'fa-file-lines', colorIcono: 'text-blue-600', bgIcono: 'bg-blue-50' },
+                    { id: 'gaceta_nombramiento', nombre: 'Gaceta de Nombramiento del Rep. Legal', obligatorio: true, icono: 'fa-user-tie', colorIcono: 'text-indigo-600', bgIcono: 'bg-indigo-50' },
+                    { id: 'ultima_acta', nombre: 'Última Acta de Asamblea (si > 5 años)', obligatorio: false, icono: 'fa-clipboard-list', colorIcono: 'text-purple-600', bgIcono: 'bg-purple-50' },
+                    { id: 'cedula_rep', nombre: 'Cédula/Pasaporte del Representante Legal', obligatorio: true, icono: 'fa-id-card', colorIcono: 'text-emerald-600', bgIcono: 'bg-emerald-50' },
+                    { id: 'rif_rep', nombre: 'RIF del Representante Legal', obligatorio: true, icono: 'fa-file-invoice-dollar', colorIcono: 'text-teal-600', bgIcono: 'bg-teal-50' },
+                    { id: 'rif_ente', nombre: 'RIF del Ente o Sociedad Anónima', obligatorio: true, icono: 'fa-building-columns', colorIcono: 'text-cyan-600', bgIcono: 'bg-cyan-50' },
+                ],
+                'natural': [
+                    { id: 'cedula_nat', nombre: 'Cédula de Identidad o Pasaporte', obligatorio: true, icono: 'fa-id-card', colorIcono: 'text-emerald-600', bgIcono: 'bg-emerald-50' },
+                    { id: 'poder_autenticado', nombre: 'Poder Autenticado y Registrado en SAPI', obligatorio: false, icono: 'fa-file-contract', colorIcono: 'text-orange-600', bgIcono: 'bg-orange-50' },
+                    { id: 'cedula_apoderado', nombre: 'Cédula del Apoderado', obligatorio: false, icono: 'fa-id-card', colorIcono: 'text-teal-600', bgIcono: 'bg-teal-50' },
+                    { id: 'rif_rep_nat', nombre: 'RIF del Representante Legal', obligatorio: true, icono: 'fa-file-invoice-dollar', colorIcono: 'text-teal-600', bgIcono: 'bg-teal-50' },
+                ],
+                'juridica': [
+                    { id: 'acta_constitutiva', nombre: 'Copia del Acta Constitutiva', obligatorio: true, icono: 'fa-building', colorIcono: 'text-indigo-600', bgIcono: 'bg-indigo-50' },
+                    { id: 'ultima_acta_jur', nombre: 'Última Acta de Asamblea (si > 5 años)', obligatorio: false, icono: 'fa-clipboard-list', colorIcono: 'text-purple-600', bgIcono: 'bg-purple-50' },
+                    { id: 'rif_sociedad', nombre: 'RIF de la Sociedad (vigente)', obligatorio: true, icono: 'fa-file-invoice-dollar', colorIcono: 'text-teal-600', bgIcono: 'bg-teal-50' },
+                    { id: 'cedula_director', nombre: 'Cédula/Pasaporte del Director/Presidente', obligatorio: true, icono: 'fa-id-card', colorIcono: 'text-emerald-600', bgIcono: 'bg-emerald-50' },
+                    { id: 'rif_rep_jur', nombre: 'RIF del Representante Legal', obligatorio: true, icono: 'fa-file-lines', colorIcono: 'text-blue-600', bgIcono: 'bg-blue-50' },
+                    { id: 'poder_notariado_jur', nombre: 'Poder Notariado (si delega en tercero)', obligatorio: false, icono: 'fa-file-contract', colorIcono: 'text-orange-600', bgIcono: 'bg-orange-50' },
+                    { id: 'contratos_licencias', nombre: 'Contratos o Licencias de Uso de autores', obligatorio: false, icono: 'fa-file-signature', colorIcono: 'text-rose-600', bgIcono: 'bg-rose-50' },
+                ],
+                'apoderado': [
+                    { id: 'poder_amplio', nombre: 'Poder Amplio y Suficiente', obligatorio: true, icono: 'fa-file-contract', colorIcono: 'text-orange-600', bgIcono: 'bg-orange-50' },
+                    { id: 'original_cuaderno', nombre: 'Original numerado (Cuaderno de Poderes)', obligatorio: true, icono: 'fa-book', colorIcono: 'text-amber-600', bgIcono: 'bg-amber-50' },
+                    { id: 'copia_enumerada', nombre: 'Copia enumerada del poder', obligatorio: true, icono: 'fa-copy', colorIcono: 'text-blue-600', bgIcono: 'bg-blue-50' },
+                    { id: 'cedula_apoderado_ag', nombre: 'Cédula del Apoderado/Agente', obligatorio: true, icono: 'fa-id-card', colorIcono: 'text-emerald-600', bgIcono: 'bg-emerald-50' },
+                    { id: 'rif_apoderado_ag', nombre: 'RIF del Apoderado/Agente', obligatorio: true, icono: 'fa-file-invoice-dollar', colorIcono: 'text-teal-600', bgIcono: 'bg-teal-50' },
+                ],
+            };
+
+            // Documentos específicos por tipo de obra
+            const docsObraPorTipo = {
+                'literaria': [
+                    { id: 'ejemplares_lit', nombre: 'Dos (02) ejemplares de la obra en CD (PDF)', obligatorio: true, icono: 'fa-compact-disc', colorIcono: 'text-sky-600', bgIcono: 'bg-sky-50' },
+                ],
+                'musical': [
+                    { id: 'audio_mp3', nombre: 'Archivos de audio en formato MP3', obligatorio: true, icono: 'fa-music', colorIcono: 'text-pink-600', bgIcono: 'bg-pink-50' },
+                    { id: 'partituras_pdf', nombre: 'Partituras en formato PDF', obligatorio: true, icono: 'fa-file-pdf', colorIcono: 'text-red-600', bgIcono: 'bg-red-50' },
+                ],
+                'fonografica': [
+                    { id: 'ejemplares_fon', nombre: 'Dos ejemplares identificando productores, intérpretes, arreglistas y autores', obligatorio: true, icono: 'fa-record-vinyl', colorIcono: 'text-violet-600', bgIcono: 'bg-violet-50' },
+                ],
+                'audiovisual': [
+                    { id: 'cedulas_autores_av', nombre: 'Cédulas de autores (Director Realización, Argumento, Guion, Música)', obligatorio: true, icono: 'fa-id-card', colorIcono: 'text-emerald-600', bgIcono: 'bg-emerald-50' },
+                    { id: 'ejemplares_video', nombre: 'Dos ejemplares en formato de video', obligatorio: true, icono: 'fa-video', colorIcono: 'text-blue-600', bgIcono: 'bg-blue-50' },
+                ],
+                'radiofonica': [
+                    { id: 'cedulas_autores_rf', nombre: 'Cédulas de autores (Director Realización, Argumento, Guion, Música)', obligatorio: true, icono: 'fa-id-card', colorIcono: 'text-emerald-600', bgIcono: 'bg-emerald-50' },
+                    { id: 'ejemplares_mp3', nombre: 'Dos ejemplares en formato .mp3 del programa', obligatorio: true, icono: 'fa-podcast', colorIcono: 'text-orange-600', bgIcono: 'bg-orange-50' },
+                ],
+                'arte_visual': [
+                    { id: 'cd_fotos', nombre: 'Dos ejemplares en CD con fotografías y descripción (material, técnica, dimensiones)', obligatorio: true, icono: 'fa-camera', colorIcono: 'text-purple-600', bgIcono: 'bg-purple-50' },
+                ],
+                'software': [
+                    { id: 'cd_software', nombre: 'Dos ejemplares de la obra en CD', obligatorio: true, icono: 'fa-compact-disc', colorIcono: 'text-sky-600', bgIcono: 'bg-sky-50' },
+                    { id: 'codigo_fuente', nombre: 'Primeras dos y últimas dos páginas del código fuente', obligatorio: true, icono: 'fa-code', colorIcono: 'text-gray-700', bgIcono: 'bg-gray-100' },
+                    { id: 'manual_usuario', nombre: 'Manual de usuario', obligatorio: true, icono: 'fa-book', colorIcono: 'text-amber-600', bgIcono: 'bg-amber-50' },
+                    { id: 'manual_procedimiento', nombre: 'Manual de procedimiento', obligatorio: true, icono: 'fa-gears', colorIcono: 'text-slate-600', bgIcono: 'bg-slate-100' },
+                    { id: 'capturas_pantalla', nombre: 'Capturas de pantalla del programa', obligatorio: true, icono: 'fa-images', colorIcono: 'text-cyan-600', bgIcono: 'bg-cyan-50' },
+                ],
+                'actos_contratos': [
+                    { id: 'contrato_original', nombre: 'Contrato de cesión o licencia de uso (original)', obligatorio: true, icono: 'fa-file-contract', colorIcono: 'text-orange-600', bgIcono: 'bg-orange-50' },
+                    { id: 'contrato_copia', nombre: 'Contrato de cesión o licencia de uso (copia)', obligatorio: true, icono: 'fa-copy', colorIcono: 'text-blue-600', bgIcono: 'bg-blue-50' },
+                ],
+            };
+
+            // Sidebar
+            function openSidebar() { sidebar.classList.add('open'); overlay.classList.add('active'); document.body.style.overflow = 'hidden'; }
+            function closeSidebar() { sidebar.classList.remove('open'); overlay.classList.remove('active'); document.body.style.overflow = ''; }
+            document.addEventListener('keydown', e => { if (e.key === 'Escape' && sidebar.classList.contains('open') && window.innerWidth < 1024) closeSidebar(); });
+            sidebar.querySelectorAll('a').forEach(link => link.addEventListener('click', () => { if (window.innerWidth < 1024) setTimeout(closeSidebar, 150); }));
+            function toggleDropdown() {
+                const open = dropdownMenu.classList.contains('open');
+                if (open) { dropdownMenu.classList.remove('open'); dropdownChevron.classList.remove('rotate-180'); dropdownToggle.setAttribute('aria-expanded', 'false'); }
+                else { dropdownMenu.classList.add('open'); dropdownChevron.classList.add('rotate-180'); dropdownToggle.setAttribute('aria-expanded', 'true'); }
+            }
+            dropdownToggle.addEventListener('click', toggleDropdown);
+
+            // Toast
+            function showToast(msg) { if(toastTimer) clearTimeout(toastTimer); toastMsg.textContent = msg; toast.classList.remove('hidden','toast-out'); toast.classList.add('toast'); void toast.offsetWidth; toastTimer = setTimeout(hideToast, 2800); }
+            function hideToast() { toast.classList.add('toast-out'); toast.classList.remove('toast'); if(toastTimer) clearTimeout(toastTimer); setTimeout(() => { toast.classList.add('hidden'); toast.classList.remove('toast-out'); }, 300); }
+            window.hideToast = hideToast;
+
+            // Renderizar campos específicos según tipo de obra
+            function renderCamposEspecificos(tipoObra) {
+                let html = '';
+                switch(tipoObra) {
+                    case 'literaria':
+                        html = `<div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-slate-600"><i class="fa-solid fa-circle-info text-blue-500 mr-2"></i> Deberá consignar <strong>dos (02) ejemplares</strong> de la obra en CD, en formato PDF.</div>`;
+                        break;
+                    case 'musical':
+                        html = `<div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-slate-600"><i class="fa-solid fa-circle-info text-blue-500 mr-2"></i> Máximo <strong>25 canciones</strong> por solicitud. Deberá consignar archivos de audio en MP3 y partituras en PDF.</div>`;
+                        break;
+                    case 'fonografica':
+                        html = `<div><label for="participantes" class="block text-sm font-medium text-slate-700 mb-1.5">Identificación de productores, intérpretes, arreglistas y autores <span class="text-red-500">*</span></label><textarea id="participantes" rows="4" required class="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-800 placeholder-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-all text-sm resize-y" placeholder="Liste los nombres y roles de cada participante..."></textarea></div>`;
+                        break;
+                    case 'audiovisual':
+                        html = `
+                            <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Cédulas de autores (Director Realización, Argumento, Guion, Música) <span class="text-red-500">*</span></label>
+                                <textarea id="cedulas_av" rows="3" required class="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-800 placeholder-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-all text-sm" placeholder="Nombre y cédula de cada autor..."></textarea>
+                            </div>
+                            <div class="flex items-start gap-3" id="checkPublicidadContainer">
+                                <input type="checkbox" id="sinPublicidad" class="mt-1 rounded border-slate-300 text-brand-600 focus:ring-brand-500">
+                                <label for="sinPublicidad" class="text-sm text-slate-600">La producción no contiene publicidad ni marcas de agua de la productora (aplica para persona natural que no cede derechos).</label>
+                            </div>`;
+                        break;
+                    case 'radiofonica':
+                        html = `
+                            <div><label class="block text-sm font-medium text-slate-700 mb-1.5">Cédulas de autores (Director Realización, Argumento, Guion, Música) <span class="text-red-500">*</span></label>
+                                <textarea id="cedulas_rf" rows="3" required class="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-slate-800 placeholder-slate-400 focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20 focus:outline-none transition-all text-sm" placeholder="Nombre y cédula de cada autor..."></textarea>
+                            </div>`;
+                        break;
+                    case 'arte_visual':
+                        html = `
+                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                                <div><label for="material" class="block text-sm font-medium text-slate-700 mb-1.5">Material <span class="text-red-500">*</span></label><input type="text" id="material" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" placeholder="Óleo, acrílico..."></div>
+                                <div><label for="tecnica" class="block text-sm font-medium text-slate-700 mb-1.5">Técnica <span class="text-red-500">*</span></label><input type="text" id="tecnica" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" placeholder="Collage, digital..."></div>
+                                <div><label for="dimensiones" class="block text-sm font-medium text-slate-700 mb-1.5">Dimensiones <span class="text-red-500">*</span></label><input type="text" id="dimensiones" required class="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm" placeholder="100x80 cm"></div>
+                            </div>`;
+                        break;
+                    case 'software':
+                        html = `<div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-slate-600"><i class="fa-solid fa-circle-info text-blue-500 mr-2"></i> Deberá consignar <strong>dos ejemplares en CD</strong>, primeras/últimas páginas del código fuente, manual de usuario, manual de procedimiento y capturas de pantalla.</div>`;
+                        break;
+                    case 'actos_contratos':
+                        html = `<div class="bg-blue-50 border border-blue-200 rounded-xl p-4 text-sm text-slate-600"><i class="fa-solid fa-circle-info text-blue-500 mr-2"></i> Deberá consignar el contrato de cesión o licencia de uso en <strong>original y copia</strong>.</div>`;
+                        break;
+                    default: html = '';
+                }
+                camposEspecificos.innerHTML = html;
+                // Mostrar/ocultar checkbox de publicidad según tipo solicitante y obra
+                const checkContainer = document.getElementById('checkPublicidadContainer');
+                if (checkContainer) {
+                    const tipoSolicitante = document.querySelector('input[name="tipoSolicitante"]:checked')?.value;
+                    checkContainer.style.display = (tipoObra === 'audiovisual' && tipoSolicitante === 'natural') ? 'flex' : 'none';
+                }
+            }
+
+            // Renderizar checklist completa (admin + obra)
+            function renderDocumentos() {
+                const tipoSolicitante = document.querySelector('input[name="tipoSolicitante"]:checked')?.value || 'entes';
+                const tipoObra = tipoObraSelect.value;
+                const docsAdmin = docsAdminPorTipo[tipoSolicitante] || [];
+                const docsObra = tipoObra ? (docsObraPorTipo[tipoObra] || []) : [];
+                const allDocs = [...docsAdmin, ...docsObra];
+                
+                documentChecklist.innerHTML = '';
+                documentosCargados = {};
+                allDocs.forEach(doc => {
+                    documentosCargados[doc.id] = false;
+                    const div = document.createElement('div');
+                    div.className = 'doc-item flex flex-col sm:flex-row sm:items-center gap-3 p-4 rounded-xl border border-slate-200 bg-white transition-all';
+                    div.setAttribute('data-doc-id', doc.id);
+                    div.innerHTML = `
+                        <div class="flex items-start gap-3 flex-1 min-w-0">
+                            <div class="w-9 h-9 rounded-lg ${doc.bgIcono} flex items-center justify-center flex-shrink-0 mt-0.5"><i class="fa-solid ${doc.icono} ${doc.colorIcono} text-sm"></i></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex items-center gap-2 flex-wrap"><span class="text-sm font-semibold text-slate-800">${doc.nombre}</span>${doc.obligatorio ? '<span class="text-red-500 font-bold text-xs">*</span><span class="text-[10px] text-red-400 bg-red-50 px-1.5 py-0.5 rounded-full font-medium">Obligatorio</span>' : '<span class="text-[10px] text-slate-400 bg-slate-100 px-1.5 py-0.5 rounded-full font-medium">Opcional</span>'}</div>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 flex-shrink-0 sm:ml-auto">
+                            <input type="file" id="file-${doc.id}" accept=".pdf,.jpg,.jpeg,.png,.mp3,.mp4,.doc,.docx" class="hidden" data-doc-id="${doc.id}">
+                            <label for="file-${doc.id}" class="upload-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-300 text-slate-600 text-xs font-medium cursor-pointer hover:bg-brand-50 hover:border-brand-400 hover:text-brand-700 transition-all"><i class="fa-solid fa-upload text-[11px]"></i> Adjuntar</label>
+                            <span id="status-${doc.id}" class="text-[11px] font-medium text-slate-400 w-16 text-right">Pendiente</span>
+                        </div>`;
+                    documentChecklist.appendChild(div);
+                    div.querySelector('input[type="file"]').addEventListener('change', function() { handleFileUpload(this, doc.id); });
+                });
+                actualizarContador();
+            }
+
+            function handleFileUpload(input, docId) {
+                const statusSpan = document.getElementById('status-' + docId);
+                const docItem = input.closest('.doc-item');
+                if (input.files && input.files.length > 0) {
+                    const file = input.files[0];
+                    if (file.size > 10 * 1024 * 1024) {
+                        statusSpan.textContent = 'Excede 10MB'; statusSpan.className = 'text-[11px] font-medium text-red-500 w-16 text-right';
+                        docItem.classList.add('border-red-300','bg-red-50/30'); showToast('El archivo excede 10 MB.'); input.value = ''; return;
+                    }
+                    documentosCargados[docId] = true;
+                    statusSpan.textContent = 'Cargado ✓'; statusSpan.className = 'text-[11px] font-medium text-emerald-600 w-16 text-right';
+                    docItem.classList.remove('border-red-300','bg-red-50/30'); docItem.classList.add('border-emerald-200','bg-emerald-50/20');
+                    showToast(`"${file.name}" cargado.`);
+                } else {
+                    documentosCargados[docId] = false;
+                    statusSpan.textContent = 'Pendiente'; statusSpan.className = 'text-[11px] font-medium text-slate-400 w-16 text-right';
+                    docItem.classList.remove('border-emerald-200','bg-emerald-50/20','border-red-300','bg-red-50/30');
+                }
+                actualizarContador();
+            }
+
+            function actualizarContador() {
+                const total = Object.keys(documentosCargados).length;
+                const cargados = Object.values(documentosCargados).filter(v=>v).length;
+                docCounter.textContent = `${cargados} / ${total} cargados`;
+                docCounter.className = 'text-xs font-medium px-3 py-1 rounded-full ' + (cargados===total && total>0 ? 'bg-emerald-100 text-emerald-700' : cargados>0 ? 'bg-brand-100 text-brand-700' : 'bg-slate-100 text-slate-500');
+            }
+
+            // Eventos
+            radioGroup.forEach(r => r.addEventListener('change', function() {
+                if (this.checked) {
+                    renderDocumentos();
+                    renderCamposEspecificos(tipoObraSelect.value); // actualizar visibilidad de checkbox publicidad
+                    showToast('Documentos actualizados según tipo de solicitante.');
+                }
+            }));
+            tipoObraSelect.addEventListener('change', function() {
+                renderCamposEspecificos(this.value);
+                renderDocumentos();
+                showToast('Campos y documentos actualizados según tipo de obra.');
+            });
+
+            // Validar envío
+            btnEnviar.addEventListener('click', function() {
+                const tipoSolicitante = document.querySelector('input[name="tipoSolicitante"]:checked')?.value;
+                const tipoObra = tipoObraSelect.value;
+                if (!tipoSolicitante) { showToast('⚠️ Seleccione un tipo de solicitante.'); return; }
+                if (!tipoObra) { showToast('⚠️ Seleccione el tipo de obra.'); return; }
+
+                // Validar campos específicos visibles
+                let camposValidos = true;
+                if (tipoObra === 'fonografica') {
+                    const participantes = document.getElementById('participantes');
+                    if (!participantes.value.trim()) { participantes.classList.add('border-red-400'); showToast('⚠️ Identifique a los participantes.'); camposValidos = false; }
+                } else if (tipoObra === 'audiovisual') {
+                    const cedulas = document.getElementById('cedulas_av');
+                    if (!cedulas.value.trim()) { cedulas.classList.add('border-red-400'); showToast('⚠️ Ingrese las cédulas de los autores.'); camposValidos = false; }
+                } else if (tipoObra === 'radiofonica') {
+                    const cedulas = document.getElementById('cedulas_rf');
+                    if (!cedulas.value.trim()) { cedulas.classList.add('border-red-400'); showToast('⚠️ Ingrese las cédulas de los autores.'); camposValidos = false; }
+                } else if (tipoObra === 'arte_visual') {
+                    ['material','tecnica','dimensiones'].forEach(id => {
+                        const el = document.getElementById(id);
+                        if (el && !el.value.trim()) { el.classList.add('border-red-400'); camposValidos = false; }
+                    });
+                    if (!camposValidos) showToast('⚠️ Complete material, técnica y dimensiones.');
+                }
+                if (!camposValidos) return;
+
+                // Validar documentos obligatorios
+                const docsAdmin = docsAdminPorTipo[tipoSolicitante] || [];
+                const docsObra = docsObraPorTipo[tipoObra] || [];
+                const allDocs = [...docsAdmin, ...docsObra];
+                const faltantes = allDocs.filter(d => d.obligatorio && !documentosCargados[d.id]);
+                if (faltantes.length) {
+                    showToast(`⚠️ Faltan documentos obligatorios: ${faltantes.map(d=>d.nombre).join(', ')}.`);
+                    return;
+                }
+
+                showToast('✅ Solicitud de registro de obra enviada exitosamente.');
+                btnEnviar.disabled = true; btnEnviar.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> Enviando...';
+                setTimeout(() => {
+                    btnEnviar.disabled = false; btnEnviar.innerHTML = '<i class="fa-solid fa-paper-plane mr-1.5"></i> Enviar Solicitud';
+                    document.querySelectorAll('.stepper-dot').forEach((d,i)=> { if(i<3){ d.classList.add('done'); d.classList.remove('active'); d.innerHTML='<i class="fa-solid fa-check text-[11px]"></i>'; } if(i===3){ d.classList.add('active'); d.innerHTML='4'; } });
+                    document.querySelectorAll('.stepper-line').forEach(l=> l.classList.add('done'));
+                }, 2000);
+            });
+
+            function handleResize() { if (window.innerWidth >= 1024) { sidebar.classList.remove('open'); overlay.classList.remove('active'); document.body.style.overflow = ''; } }
+            window.addEventListener('resize', handleResize);
+            window.openSidebar = openSidebar;
+            window.closeSidebar = closeSidebar;
+
+            // Inicialización
+            renderCamposEspecificos(tipoObraSelect.value);
+            renderDocumentos();
+            console.log('🚀 SAPI · Registro de Obras listo');
+        })();
+    </script>
+</body>
+</html>

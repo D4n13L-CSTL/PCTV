@@ -167,11 +167,11 @@ function populateLegalDocs(applicantType, ipType) {
     docs.push({ label: "Poder autenticado (apoderado en SAPI)", required: false });
     docs.push({ label: "Documento de cesión de derechos patrimoniales / inventores", required: true });
   } else if (applicantType === 'ente') {
-    docs.push({ label: "Gaceta Oficial Decreto/Ley creación", required: true });
-    docs.push({ label: "Gaceta nombramiento Representante Legal", required: true });
-    docs.push({ label: "Copia RIF del ente", required: true });
-    docs.push({ label: "Cédula representante y RIF", required: true });
-    docs.push({ label: "Copia última acta (si SA más 5 años)", required: false });
+    docs.push({ label: "Copia simple de la Gaceta Oficial donde se publicó el Decreto o La Ley de creación", required: true });
+    docs.push({ label: "Copia simple de la Gaceta Oficial donde se publicó el Acta Constitutiva en caso de Sociedades Anónimas o Fundaciones del Estado (Si Aplica)", required: true });
+    docs.push({ label: "Copia Simple de la Gaceta Oficial en donde aparezca publicado el Nombramiento del Representante Legal para entes del Estado", required: true });
+    docs.push({ label: "Si la Sociedad Anónima tiene más de cinco (5) años de creada, copia simple de la última acta de asamblea.", required: true });
+    docs.push({ label: "Copia simple de la Cédula de Identidad o en su defecto copia simple del pasaporte del representante legal", required: false });
   }
   // adicionales para derecho de autor o registro obra
   if (ipType === 'derechoAutor' || ipType === 'registroObra') {
