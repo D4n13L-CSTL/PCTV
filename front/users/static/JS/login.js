@@ -56,7 +56,7 @@ async function handleLogin() {
         // data.user = { id, username, email, full_name }
         saveSession(data.user);
         showToast(`¡Bienvenido, ${data.user.full_name}!`, 'success');
-        setTimeout(() => { window.location.href = '/index'; }, 1500);
+        setTimeout(() => { window.location.href = '/dashboard'; }, 1500);
 
     } catch (err) {
         showToast(err.message || 'Error al iniciar sesión', 'error');

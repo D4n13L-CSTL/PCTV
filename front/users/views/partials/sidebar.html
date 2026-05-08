@@ -46,7 +46,7 @@ class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-
 <!-- Menú desplegable -->
 <div id="dropdownSolicitudes" class="dropdown-menu open ml-8 border-l border-slate-700/50 pl-3 space-y-0.5">
     <a href="{{url_for('Renders.render_patente')}}"
-    class="block px-3 py-2 rounded-md text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-150 bg-brand-600/20 text-brand-300 font-medium">
+    class="block px-3 py-2 rounded-md text-sm text-slate-300 hover:text-white hover:bg-slate-800 transition-all duration-150">
     <i class="fa-solid fa-lightbulb mr-2 text-[11px] text-brand-400"></i> Patente
 </a>
 <a href="{{url_for('Renders.render_marcas')}}"
@@ -85,10 +85,75 @@ class="flex items-center gap-3 px-3 py-2.5 rounded-lg text-slate-300 hover:text-
         </div>
     </div>
     <!-- Botón Salir -->
-    <button
+    <button onclick="performLogout()"
     class="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-red-400 hover:text-white hover:bg-red-600/80 transition-all duration-200 group">
     <i class="fa-solid fa-right-from-bracket w-5 text-center group-hover:text-white transition-colors"></i>
     <span class="font-medium text-sm">Salir</span>
 </button>
 </div>
 </aside>
+<script>
+    async function performLogout() {
+  const API_BASE_URL = 'http://127.0.0.1:8000/api'; // Ajusta según tu config
+  const accessToken = localStorage.getItem("access_token");
+  const refreshToken = localStorage.getItem("refresh_token");
+
+  // 1. Intentar avisar al servidor para invalidar el refresh token
+  if (accessToken && refreshToken) {
+    try {
+      await fetch(`${API_BASE_URL}/logout/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        body: JSON.stringify({ refresh: refreshToken })
+      });
+    } catch (error) {
+      console.warn("No se pudo invalidar en el servidor, procediendo con borrado local.");
+    }
+  }
+
+  // 2. Limpiar todo el almacenamiento relacionado con la app
+  const keysToRemove = [
+    "access_token", "refresh_token", "currentUser",
+    "ip_requests", "ip_payments", "ip_profile"
+  ];
+  keysToRemove.forEach(key => localStorage.removeItem(key));
+  sessionStorage.clear();
+
+  // 3. Feedback visual y redirección
+  if (typeof Swal !== 'undefined') {
+    Swal.fire({
+      icon: 'info',
+      title: 'Sesión terminada',
+      text: 'Esperamos verte pronto',
+      timer: 1500,
+      showConfirmButton: false
+    }).then(() => {
+      window.location.href = '/'; // Redirige al login (ajusta la ruta si es necesario)
+    });
+  } else {
+
+    window.location.href = '/';
+  }
+}
+
+document.addEventListener("DOMContentLoaded", function() {
+    const currentPath = window.location.pathname;
+    const links = document.querySelectorAll("#sidebar a");
+    links.forEach(link => {
+        if (currentPath.endsWith(link.getAttribute("href")) || 
+            (link.getAttribute("href") === "/" && currentPath === "/")) {
+            link.classList.add("bg-brand-600/20", "text-brand-300", "font-medium");
+            link.querySelector("i")?.classList.add("text-brand-300");
+        }
+    });
+    // También puedes abrir el dropdown si el enlace activo está dentro
+    const activeDropdownLink = document.querySelector('#sidebar a.bg-brand-600\\/20');
+    if (activeDropdownLink && activeDropdownLink.closest('#dropdownSolicitudes')) {
+        document.getElementById('dropdownSolicitudes').classList.add('open');
+        document.getElementById('dropdownChevron').classList.add('rotate-180');
+    }
+});
+</script>

@@ -6,7 +6,7 @@ app_render = Blueprint('Renders', __name__, url_prefix='')
 def render_login():
     return make_response(render_template('loggin.html'), 200)
 
-@app_render.route("/dashabord", methods=["GET"])
+@app_render.route("/dashboard", methods=["GET"])
 def render_dashabord():
     return make_response(render_template('dashboard.html'), 200)
 
