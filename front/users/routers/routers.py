@@ -10,6 +10,12 @@ def render_login():
 def render_index():
     return make_response(render_template('index.html'), 200)
 
+@app_render.route("/patente", methods=["GET"])  
+def render_patente():
+    return make_response(render_template('patente.html'), 200)
+
+
+
 @app_render.route("/reset-password/<string:token>", methods=["GET"])
 def render_reset_password(token):
     print(f"DEBUG: Renderear reset con token: {token}")

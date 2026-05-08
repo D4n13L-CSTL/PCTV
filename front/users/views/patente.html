@@ -1,0 +1,445 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+    <title>IP Center - Propiedad Intelectual</title>
+    <!-- Tailwind + Font Awesome -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <!-- SweetAlert2 opcional para notificaciones -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <style>
+        /* transiciones suaves */
+        .transition-smooth {
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-item.active {
+            background-color: #1e3a8a;
+            color: white;
+        }
+
+        .file-preview {
+            font-size: 0.75rem;
+            word-break: break-all;
+        }
+    </style>
+</head>
+
+<body class="bg-gray-100 font-sans antialiased">
+
+    <div class="flex h-screen overflow-hidden">
+        <!-- SIDEBAR (Panel lateral) -->
+        <aside class="w-72 bg-white shadow-xl z-10 flex flex-col border-r border-gray-200">
+            <div class="p-6 border-b border-gray-200">
+                <h1 class="text-2xl font-bold text-blue-900 flex items-center gap-2"><i
+                        class="fas fa-gavel text-blue-700"></i> IP Center</h1>
+                <p class="text-xs text-gray-500 mt-1">Registro y Solicitud de Servicio</p>
+            </div>
+            <nav class="flex-1 py-6 px-4 space-y-2">
+                <a href="#" data-view="dashboard"
+                    class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 transition-smooth"><i
+                        class="fas fa-tachometer-alt w-5"></i> Dashboard</a>
+                <a href="#" data-view="new-request"
+                    class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 transition-smooth"><i
+                        class="fas fa-plus-circle w-5"></i> Nueva Solicitud</a>
+                <a href="#" data-view="payments"
+                    class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 transition-smooth"><i
+                        class="fas fa-credit-card w-5"></i> Pagos Realizados</a>
+                <a href="#" data-view="profile"
+                    class="sidebar-item flex items-center gap-3 px-4 py-3 rounded-lg text-gray-700 hover:bg-blue-50 transition-smooth"><i
+                        class="fas fa-user-circle w-5"></i> Mi Perfil</a>
+            </nav>
+            <div class="p-4 border-t border-gray-200 text-xs text-gray-400 text-center">
+                <i class="fas fa-shield-alt"></i> SAPI / Derechos de Autor
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT -->
+        <main class="flex-1 overflow-y-auto p-6 bg-gray-50" id="mainContent">
+            <!-- Aquí se inyectarán las vistas dinámicas -->
+            <div id="viewContainer" class="animate-fade-in"></div>
+        </main>
+    </div>
+
+    <script>
+        // ---------------------- DATA MODELS (LocalStorage) -------------------------
+        let requests = [];       // solicitudes
+        let payments = [];       // pagos realizados
+        let userProfile = {      // documentos personales para verificación
+            tipoSolicitante: "natural", // natural, juridico, ente
+            documentos: [],
+            nombreCompleto: "",
+            rif: "",
+            cedula: "",
+            // extras
+        };
+
+        // Helper load/save
+        function loadData() {
+            const storedRequests = localStorage.getItem("ip_requests");
+            if (storedRequests) requests = JSON.parse(storedRequests);
+            const storedPayments = localStorage.getItem("ip_payments");
+            if (storedPayments) payments = JSON.parse(storedPayments);
+            const storedProfile = localStorage.getItem("ip_profile");
+            if (storedProfile) userProfile = JSON.parse(storedProfile);
+            else {
+                // perfil inicial por defecto
+                userProfile = { tipoSolicitante: "natural", documentos: [], nombreCompleto: "Usuario Demo", rif: "J-12345678-0", cedula: "V12345678" };
+                saveProfile();
+            }
+        }
+        function saveRequests() { localStorage.setItem("ip_requests", JSON.stringify(requests)); }
+        function savePayments() { localStorage.setItem("ip_payments", JSON.stringify(payments)); }
+        function saveProfile() { localStorage.setItem("ip_profile", JSON.stringify(userProfile)); }
+
+        // utils
+        function generateId() { return Date.now() + '-' + Math.random().toString(36).substr(2, 6); }
+
+        // =========================== REQUISITOS DINAMICOS (según documento) ==========================
+        // Obtiene lista de documentos/requisitos según: tipoSolicitud (patente, marca, copyright), subtipoObra (solo copyright), tipoSolicitante, conApoderado
+        function getRequisitosDocumentales(tipo, subtipoObra, tipoSol, conApoderado) {
+            let docs = [];
+            // Requisitos comunes según tipo de solicitante (ENTES / PERSONA NATURAL / PERSONA JURÍDICA)
+            if (tipoSol === "ente") {
+                docs.push({ label: "Gaceta Oficial (Decreto o Ley de creación)", required: true, key: "gaceta_creacion" });
+                docs.push({ label: "Gaceta Oficial Acta Constitutiva (si aplica)", required: false, key: "gaceta_acta" });
+                docs.push({ label: "Gaceta Oficial Nombramiento Representante Legal", required: true, key: "gaceta_nombramiento" });
+                docs.push({ label: "Última Acta de Asamblea (si >5 años)", required: false, key: "acta_asamblea" });
+                docs.push({ label: "Cédula/Pasaporte del Representante Legal", required: true, key: "ci_representante" });
+                docs.push({ label: "RIF del Representante Legal", required: true, key: "rif_representante" });
+                docs.push({ label: "RIF del Ente", required: true, key: "rif_ente" });
+            } else if (tipoSol === "juridico") {
+                docs.push({ label: "Acta Constitutiva de la Sociedad", required: true, key: "acta_constitutiva" });
+                docs.push({ label: "Última Acta de Asamblea (si >5 años)", required: false, key: "acta_asamblea_jur" });
+                docs.push({ label: "RIF de la Sociedad (vigente)", required: true, key: "rif_sociedad" });
+                docs.push({ label: "Cédula/Pasaporte del Director/Presidente", required: true, key: "ci_director" });
+                docs.push({ label: "RIF del Representante Legal", required: true, key: "rif_replegal" });
+                docs.push({ label: "Documento de Cesión de derechos patrimoniales (autor a favor)", required: true, key: "cesion_derechos" });
+            } else { // natural
+                docs.push({ label: "Cédula de Identidad o Pasaporte", required: true, key: "ci_natural" });
+                docs.push({ label: "RIF del Solicitante", required: true, key: "rif_natural" });
+                if (conApoderado) {
+                    docs.push({ label: "Poder autenticado y registrado en SAPI", required: true, key: "poder_apoderado" });
+                    docs.push({ label: "Cédula del Apoderado", required: true, key: "ci_apoderado" });
+                    docs.push({ label: "RIF del Apoderado", required: true, key: "rif_apoderado" });
+                }
+                // extranjero consideración: se maneja nota, pero incluimos opcional poder
+            }
+            // Adicionales para Apoderado / Agente Industrial si aplica (independiente)
+            if (conApoderado && (tipoSol === "juridico" || tipoSol === "natural" || tipoSol === "ente")) {
+                docs.push({ label: "Poder amplio y suficiente (autenticado/apostillado)", required: true, key: "poder_agente" });
+            }
+
+            // Requisitos específicos según producto (Patente, Marca, Copyright)
+            if (tipo === "patente") {
+                docs.push({ label: "Reseña y alcance de la invención (documento descriptivo)", required: true, key: "descripcion_invencion" });
+                docs.push({ label: "Declaración y cesión de inventores (firmada cedente/cesionario)", required: true, key: "declaracion_cesion_inventores" });
+                docs.push({ label: "Recomendación: pago de búsqueda avanzada SAPI (comprobante)", required: false, key: "busqueda_avanzada" });
+            } else if (tipo === "marca") {
+                docs.push({ label: "Listado de 3 nombres propuestos (archivo .txt o PDF)", required: true, key: "lista_nombres" });
+                docs.push({ label: "Imagen (isotipo/imagotipo) formato JPG", required: false, key: "imagen_marca" });
+                docs.push({ label: "Rubros/mercados impactados (descripción)", required: true, key: "rubros_marca" });
+                docs.push({ label: "Búsqueda de antecedentes fonéticos y gráficos (pago)", required: false, key: "busqueda_marca" });
+            } else if (tipo === "copyright") {
+                // Requisitos generales adicionales para obras
+                docs.push({ label: "Documento de cesión de derechos patrimoniales (si persona jurídica/ente)", required: (tipoSol !== "natural"), key: "cesion_copyright" });
+                // Requisitos según tipo de obra
+                if (subtipoObra === "literaria") {
+                    docs.push({ label: "2 ejemplares de la obra en CD (formato PDF)", required: true, key: "ejemplares_literarios" });
+                } else if (subtipoObra === "musical") {
+                    docs.push({ label: "2 CDs con archivos MP3 + partituras (PDF)", required: true, key: "ejemplares_musicales" });
+                } else if (subtipoObra === "fonografica") {
+                    docs.push({ label: "2 ejemplares identificando productores, intérpretes, autores", required: true, key: "produccion_fonografica" });
+                } else if (subtipoObra === "audiovisual") {
+                    docs.push({ label: "Cédula de autor (Director Realización/Guion/Música)", required: true, key: "autores_audiovisual" });
+                    docs.push({ label: "2 ejemplares en formato video (CD/USB)", required: true, key: "video_ejemplares" });
+                } else if (subtipoObra === "radiofonica") {
+                    docs.push({ label: "2 ejemplares en formato MP3 (programa radio)", required: true, key: "radio_mp3" });
+                } else if (subtipoObra === "artevisual") {
+                    docs.push({ label: "2 CDs con fotografías + descripción técnica (material, dimensiones)", required: true, key: "arte_descripcion" });
+                } else if (subtipoObra === "software") {
+                    docs.push({ label: "2 CDs con código fuente/primeras/últimas páginas", required: true, key: "software_codigo" });
+                    docs.push({ label: "Manual de usuario y procedimiento", required: true, key: "manual_usuario" });
+                    docs.push({ label: "Capturas de pantalla del programa", required: true, key: "capturas_pantalla" });
+                } else if (subtipoObra === "contratos") {
+                    docs.push({ label: "Original y copia del contrato de cesión o licencia", required: true, key: "contrato_original" });
+                }
+                // Para cualquier obra se exige identificación formal (nombre, cédula autor, etc.)
+                docs.push({ label: "Identificación obra: nombre igual al declarado en planilla", required: true, key: "identificacion_obra" });
+            }
+            return docs;
+        }
+
+        // obtener campos específicos adicionales (inputs de texto/archivos combinados)
+        function getSpecificFields(tipo, subtipoObra) {
+            let fields = [];
+            if (tipo === "patente") {
+                fields.push({ label: "Reseña detallada de la invención", type: "textarea", name: "reseña_invencion", required: true });
+                fields.push({ label: "Alcance técnico", type: "text", name: "alcance_tecnico", required: false });
+            } else if (tipo === "marca") {
+                fields.push({ label: "Primer nombre propuesto", type: "text", name: "nombre1", required: true });
+                fields.push({ label: "Segundo nombre propuesto", type: "text", name: "nombre2", required: true });
+                fields.push({ label: "Tercer nombre propuesto", type: "text", name: "nombre3", required: true });
+                fields.push({ label: "Rubros / mercados impactados", type: "textarea", name: "rubros", required: true });
+            } else if (tipo === "copyright") {
+                if (subtipoObra === "literaria") fields.push({ label: "Título de la obra literaria", type: "text", name: "titulo_obra", required: true });
+                else if (subtipoObra === "musical") fields.push({ label: "Título / Álbum", type: "text", name: "titulo_musical", required: true });
+                else if (subtipoObra === "audiovisual") fields.push({ label: "Título de la obra audiovisual", type: "text", name: "titulo_av", required: true });
+                else if (subtipoObra === "software") fields.push({ label: "Nombre del software / versión", type: "text", name: "nombre_software", required: true });
+                else fields.push({ label: "Título de la obra", type: "text", name: "titulo_generico", required: true });
+            }
+            return fields;
+        }
+
+        // RENDER VISTAS PRINCIPALES (Dashboard, nueva solicitud, pagos, perfil)
+        let currentView = "dashboard";
+
+        function renderApp() {
+            const container = document.getElementById("viewContainer");
+            if (currentView === "dashboard") renderDashboard(container);
+            else if (currentView === "new-request") renderNewRequest(container);
+            else if (currentView === "payments") renderPayments(container);
+            else if (currentView === "profile") renderProfile(container);
+        }
+
+        // Dashboard con lista de solicitudes realizadas
+        function renderDashboard(container) {
+            html = `<div class="bg-white rounded-2xl shadow-md p-6">
+            <h2 class="text-2xl font-bold text-gray-800 mb-2"><i class="fas fa-tachometer-alt text-blue-600"></i> Mis Solicitudes</h2>
+            <p class="text-gray-500 mb-6">Historial de patentes, marcas y derechos de autor.</p>`;
+            if (requests.length === 0) {
+                html += `<div class="bg-blue-50 p-6 rounded-xl text-center"><i class="fas fa-inbox text-4xl text-blue-300 mb-2"></i><p>Aún no has creado solicitudes. Comienza una nueva.</p></div>`;
+            } else {
+                html += `<div class="overflow-x-auto"><table class="min-w-full bg-white border border-gray-200 rounded-xl"><thead class="bg-gray-100"><tr><th class="px-4 py-3 text-left">ID</th><th>Tipo</th><th>Subtipo/Obra</th><th>Monto</th><th>Estado</th><th>Fecha</th><th>Acciones</th></tr></thead><tbody>`;
+                requests.forEach(req => {
+                    let estadoColor = req.status === 'pagado' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700';
+                    html += `<tr class="border-b"><td class="px-4 py-2 text-sm">${req.id.slice(-6)}</td>
+                <td class="px-4 py-2">${req.tipo === 'patente' ? 'Patente' : req.tipo === 'marca' ? 'Marca' : 'Derecho Autor'}</td>
+                <td class="px-4 py-2">${req.subtipo || '-'}</td>
+                <td class="px-4 py-2">$${req.monto}</td>
+                <td class="px-4 py-2"><span class="px-2 py-1 rounded-full text-xs font-semibold ${estadoColor}">${req.status === 'pagado' ? 'Pagado' : 'Pendiente'}</span></td>
+                <td class="px-4 py-2">${new Date(req.fecha).toLocaleDateString()}</td>
+                <td class="px-4 py-2">${req.status !== 'pagado' ? `<button onclick="registrarPago('${req.id}', ${req.monto})" class="bg-blue-600 text-white px-3 py-1 rounded-md text-xs hover:bg-blue-700"><i class="fas fa-money-bill-wave"></i> Pagar</button>` : '<span class="text-green-600"><i class="fas fa-check-circle"></i> Cancelado</span>'}</td></tr>`;
+                });
+                html += `</tbody></table></div>`;
+            }
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        window.registrarPago = function (requestId, monto) {
+            Swal.fire({
+                title: 'Registrar Pago',
+                html: `<p>Solicitud: ${requestId}</p><p>Monto base: $${monto}</p><input id="montoPagado" class="swal2-input" placeholder="Monto a pagar" value="${monto}">`,
+                showCancelButton: true,
+                confirmButtonText: 'Registrar pago',
+                preConfirm: () => {
+                    const montoPagado = document.getElementById('montoPagado').value;
+                    if (!montoPagado) Swal.showValidationMessage('Monto requerido');
+                    return { montoPagado };
+                }
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    const pagoMonto = parseFloat(result.value.montoPagado);
+                    const solicitud = requests.find(r => r.id === requestId);
+                    if (solicitud && solicitud.status !== 'pagado') {
+                        solicitud.status = 'pagado';
+                        const nuevoPago = {
+                            id: generateId(),
+                            requestId: requestId,
+                            monto: pagoMonto,
+                            fecha: new Date().toISOString(),
+                            tipo: solicitud.tipo,
+                        };
+                        payments.push(nuevoPago);
+                        saveRequests();
+                        savePayments();
+                        Swal.fire('Éxito', 'Pago registrado correctamente', 'success');
+                        renderApp();
+                    } else {
+                        Swal.fire('Error', 'Solicitud ya pagada o no existe', 'error');
+                    }
+                }
+            });
+        };
+
+        // Vista Pagos realizados
+        function renderPayments(container) {
+            let html = `<div class="bg-white rounded-2xl shadow-md p-6"><h2 class="text-2xl font-bold mb-4"><i class="fas fa-receipt text-green-600"></i> Pagos Realizados</h2>`;
+            if (payments.length === 0) html += `<div class="text-center text-gray-500 py-8">No hay pagos registrados aún.</div>`;
+            else {
+                html += `<div class="space-y-3">`;
+                payments.forEach(p => {
+                    const solicitud = requests.find(r => r.id === p.requestId);
+                    const tipoNombre = solicitud ? (solicitud.tipo === 'patente' ? 'Patente' : solicitud.tipo === 'marca' ? 'Marca' : 'Derecho Autor') : 'Registro';
+                    html += `<div class="border p-4 rounded-lg flex justify-between items-center"><div><p class="font-semibold">${tipoNombre} - ID: ${p.requestId.slice(-8)}</p><p class="text-sm text-gray-500">${new Date(p.fecha).toLocaleString()}</p></div><div class="text-lg font-bold text-green-700">$${p.monto}</div></div>`;
+                });
+                html += `</div>`;
+            }
+            html += `</div>`;
+            container.innerHTML = html;
+        }
+
+        // Perfil con subida de documentos personales
+        function renderProfile(container) {
+            let tipos = [{ value: "natural", label: "Persona Natural" }, { value: "juridico", label: "Persona Jurídica" }, { value: "ente", label: "Ente del Estado" }];
+            let html = `<div class="bg-white rounded-2xl shadow-md p-6"><h2 class="text-2xl font-bold mb-4"><i class="fas fa-id-card"></i> Verificación de Identidad</h2>
+        <p class="text-gray-500 mb-4">Sube tus documentos personales para validar tu perfil ante la plataforma.</p>
+        <div class="mb-4"><label class="block font-medium">Tipo de solicitante principal</label><select id="profileTipo" class="mt-1 p-2 border rounded w-full">${tipos.map(t => `<option value="${t.value}" ${userProfile.tipoSolicitante === t.value ? 'selected' : ''}>${t.label}</option>`).join('')}</select></div>
+        <div><label class="block font-medium">Nombre / Razón Social</label><input type="text" id="profileNombre" class="mt-1 p-2 border rounded w-full" value="${userProfile.nombreCompleto || ''}"></div>
+        <div class="mt-3"><label class="block font-medium">RIF</label><input type="text" id="profileRif" class="mt-1 p-2 border rounded w-full" value="${userProfile.rif || ''}"></div>
+        <div class="mt-3"><label class="block font-medium">Cédula / Pasaporte</label><input type="text" id="profileCedula" class="mt-1 p-2 border rounded w-full" value="${userProfile.cedula || ''}"></div>
+        <div class="mt-5"><label class="block font-bold">Documentos adjuntos de verificación (copia cédula, RIF, etc)</label>
+        <div id="profileDocsList" class="mt-2 space-y-2"></div>
+        <input type="file" id="newDocUpload" class="mt-2 text-sm"><button id="addProfileDocBtn" class="mt-2 bg-gray-700 text-white px-3 py-1 rounded text-sm">Agregar documento</button>
+        </div>
+        <button id="saveProfileBtn" class="mt-6 bg-blue-700 text-white px-5 py-2 rounded-lg w-full">Guardar Perfil</button></div>`;
+            container.innerHTML = html;
+            function refreshDocsList() {
+                const containerDocs = document.getElementById("profileDocsList");
+                if (containerDocs) {
+                    containerDocs.innerHTML = userProfile.documentos.map((doc, idx) => `<div class="flex justify-between items-center bg-gray-100 p-2 rounded"><span><i class="fas fa-file-alt"></i> ${doc.name}</span><button onclick="removeDoc(${idx})" class="text-red-500 text-xs"><i class="fas fa-trash"></i></button></div>`).join('');
+                }
+            }
+            window.removeDoc = function (idx) { userProfile.documentos.splice(idx, 1); saveProfile(); refreshDocsList(); };
+            document.getElementById("addProfileDocBtn")?.addEventListener("click", () => {
+                const fileInput = document.getElementById("newDocUpload");
+                if (fileInput.files.length) {
+                    const file = fileInput.files[0];
+                    userProfile.documentos.push({ name: file.name, lastModified: new Date().toISOString() });
+                    saveProfile();
+                    refreshDocsList();
+                    fileInput.value = '';
+                    Swal.fire("Documento agregado", "Se ha guardado referencia", "success");
+                } else Swal.fire("Selecciona un archivo", "", "warning");
+            });
+            document.getElementById("saveProfileBtn")?.addEventListener("click", () => {
+                userProfile.tipoSolicitante = document.getElementById("profileTipo").value;
+                userProfile.nombreCompleto = document.getElementById("profileNombre").value;
+                userProfile.rif = document.getElementById("profileRif").value;
+                userProfile.cedula = document.getElementById("profileCedula").value;
+                saveProfile();
+                Swal.fire("Perfil actualizado", "Documentos verificados guardados", "success");
+            });
+            refreshDocsList();
+        }
+
+        // Formulario de Nueva Solicitud dinámico usando condiciones
+        function renderNewRequest(container) {
+            let html = `<div class="bg-white rounded-2xl shadow-md p-6"><h2 class="text-2xl font-bold mb-4"><i class="fas fa-file-signature"></i> Nueva Solicitud de Propiedad Industrial</h2>
+        <div class="grid md:grid-cols-2 gap-4 mb-6">
+            <div><label class="font-semibold">Tipo de solicitud</label><select id="reqType" class="w-full p-2 border rounded mt-1"><option value="patente">Patente</option><option value="marca">Marca</option><option value="copyright">Derecho de Autor</option></select></div>
+            <div id="subtipoContainer" style="display:none;"><label class="font-semibold">Subtipo (Derecho de Autor)</label><select id="subtypeObra" class="w-full p-2 border rounded mt-1"><option value="literaria">Obra Literaria</option><option value="musical">Obra Musical</option><option value="fonografica">Producción Fonográfica</option><option value="audiovisual">Audiovisual / Radiofónica</option><option value="radiofonica">Obra Radiofónica</option><option value="artevisual">Arte Visual</option><option value="software">Programas Computación / BD</option><option value="contratos">Actos y Contratos</option></select></div>
+            <div><label class="font-semibold">Tipo de Solicitante</label><select id="solicitanteType" class="w-full p-2 border rounded mt-1"><option value="natural">Persona Natural</option><option value="juridico">Persona Jurídica</option><option value="ente">Entes / Empresas del Estado</option></select></div>
+            <div><label class="flex items-center gap-2 mt-6"><input type="checkbox" id="hasApoderado"> <span>¿Cuenta con Apoderado/Agente PI?</span></label></div>
+        </div>
+        <div id="camposEspecificos" class="border-t pt-4 mb-4"></div>
+        <div id="listaRequisitosDoc" class="mb-5"></div>
+        <div class="mb-4"><label class="font-bold">Monto a pagar (US$ / Moneda local) *</label><input type="number" id="montoSolicitud" class="w-full p-2 border rounded" placeholder="Ej: 250" required></div>
+        <button id="guardarSolicitudBtn" class="bg-green-700 text-white px-6 py-2 rounded-lg w-full">Registrar Solicitud y Monto</button>
+        </div>`;
+            container.innerHTML = html;
+            const reqTypeSelect = document.getElementById("reqType");
+            const subtipoContainer = document.getElementById("subtipoContainer");
+            const solicitanteType = document.getElementById("solicitanteType");
+            const hasApoderadoCheck = document.getElementById("hasApoderado");
+            const camposEspecificosDiv = document.getElementById("camposEspecificos");
+            const requisitosDiv = document.getElementById("listaRequisitosDoc");
+
+            function updateForm() {
+                let tipo = reqTypeSelect.value;
+                let subtipo = document.getElementById("subtypeObra")?.value || null;
+                if (tipo === "copyright") subtipoContainer.style.display = "block";
+                else subtipoContainer.style.display = "none";
+                let tipoSol = solicitanteType.value;
+                let conApoderado = hasApoderadoCheck.checked;
+                // render campos específicos (text inputs)
+                let specific = getSpecificFields(tipo, subtipo);
+                camposEspecificosDiv.innerHTML = `<h3 class="font-semibold text-md">Información del producto/obra</h3>` + specific.map(f =>
+                    `<div class="mb-3"><label>${f.label} ${f.required ? '*' : ''}</label>${f.type === 'textarea' ? `<textarea name="${f.name}" class="w-full p-2 border rounded"></textarea>` : `<input type="${f.type}" name="${f.name}" class="w-full p-2 border rounded" />`}</div>`
+                ).join('');
+                // obtener requisitos documentales según el documento
+                let docs = getRequisitosDocumentales(tipo, subtipo, tipoSol, conApoderado);
+                requisitosDiv.innerHTML = `<h3 class="font-semibold text-lg mb-2">Documentos obligatorios (adjuntar según corresponda)</h3><div class="grid gap-3">` + docs.map((doc, idx) => `
+                <div class="flex flex-col border p-3 rounded-lg bg-gray-50"><span class="font-medium">${doc.label} ${doc.required ? '(Obligatorio)' : '(Recomendado)'}</span>
+                <input type="file" data-doc-key="${doc.key}" class="mt-1 text-sm doc-file-input" accept=".pdf,.jpg,.png,.txt,.doc">
+                <small class="text-gray-400">Subir documento digital (simulación)</small></div>`).join('') + `</div>`;
+            }
+            reqTypeSelect.addEventListener("change", updateForm);
+            solicitanteType.addEventListener("change", updateForm);
+            hasApoderadoCheck.addEventListener("change", updateForm);
+            document.addEventListener("change", (e) => { if (e.target.id === "subtypeObra") updateForm(); });
+            updateForm();
+
+            document.getElementById("guardarSolicitudBtn").addEventListener("click", () => {
+                let tipo = reqTypeSelect.value;
+                let subtipo = tipo === "copyright" ? document.getElementById("subtypeObra").value : null;
+                let tipoSol = solicitanteType.value;
+                let conApoderado = hasApoderadoCheck.checked;
+                let monto = parseFloat(document.getElementById("montoSolicitud").value);
+                if (isNaN(monto) || monto <= 0) { Swal.fire("Error", "Debe indicar un monto válido", "error"); return; }
+                // Recoger campos específicos
+                let specificData = {};
+                document.querySelectorAll("#camposEspecificos input, #camposEspecificos textarea").forEach(inp => { if (inp.name) specificData[inp.name] = inp.value; });
+                // recoger archivos simulados (guardamos nombres)
+                let documentosAdjuntos = [];
+                document.querySelectorAll(".doc-file-input").forEach(fileInp => {
+                    if (fileInp.files.length > 0) {
+                        let fileName = fileInp.files[0].name;
+                        let key = fileInp.getAttribute("data-doc-key");
+                        documentosAdjuntos.push({ key, name: fileName });
+                    }
+                });
+                let nuevaSolicitud = {
+                    id: generateId(),
+                    tipo: tipo,
+                    subtipo: subtipo,
+                    tipoSolicitante: tipoSol,
+                    conApoderado: conApoderado,
+                    monto: monto,
+                    status: "pendiente",
+                    fecha: new Date().toISOString(),
+                    specificData: specificData,
+                    documentosAdjuntos: documentosAdjuntos
+                };
+                requests.unshift(nuevaSolicitud);
+                saveRequests();
+                Swal.fire("Solicitud creada", `Registro #${nuevaSolicitud.id.slice(-8)} creado con monto $${monto}. Estado pendiente de pago.`, "success").then(() => {
+                    currentView = "dashboard";
+                    renderApp();
+                    highlightSidebar();
+                });
+            });
+        }
+
+        function highlightSidebar() {
+            document.querySelectorAll('.sidebar-item').forEach(item => {
+                item.classList.remove('active', 'bg-blue-700', 'text-white');
+                if (item.getAttribute('data-view') === currentView) {
+                    item.classList.add('active', 'bg-blue-700', 'text-white');
+                }
+            });
+        }
+
+        // Event listeners y navegación
+        function bindNavigation() {
+            document.querySelectorAll('.sidebar-item').forEach(link => {
+                link.addEventListener('click', (e) => {
+                    e.preventDefault();
+                    const view = link.getAttribute('data-view');
+                    if (view) { currentView = view; renderApp(); highlightSidebar(); }
+                });
+            });
+        }
+
+        loadData();
+        renderApp();
+        bindNavigation();
+        highlightSidebar();
+    </script>
+</body>
+
+</html>
